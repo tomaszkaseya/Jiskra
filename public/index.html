@@ -148,7 +148,7 @@ function renderViewToggle(){
 
 function renderTabs(){
   $("#tabs").innerHTML = CFG.gates.map(g =>
-    `<button class="tab ${String(g)===GATE?"active":""}" data-g="${g}">Gate ${g}</button>`).join("");
+    `<button class="tab ${String(g)===GATE?"active":""}" data-g="${g}" title="${esc((CFG.gateDescriptions||{})[g]||"")}">Gate ${g}</button>`).join("");
   $("#tabs").querySelectorAll(".tab").forEach(b => b.onclick = () => {
     GATE = b.dataset.g; localStorage.setItem("gate", GATE); renderTabs(); load();
   });
@@ -176,7 +176,8 @@ function render(){
   if(q) list = list.filter(e=>e.targetQuarter===q);
   if(rf==="open-risks") list = list.filter(e=>openRisks(e).length);
   const totalOpen = list.reduce((n,e)=>n+openRisks(e).length,0);
-  $("#summary").textContent = `Gate ${GATE} · ${list.length} epic${list.length===1?"":"s"} · ${totalOpen} open risk${totalOpen===1?"":"s"}`;
+  const gdesc = (CFG.gateDescriptions||{})[GATE];
+  $("#summary").textContent = `Gate ${GATE}${gdesc?` (${gdesc})`:""} · ${list.length} epic${list.length===1?"":"s"} · ${totalOpen} open risk${totalOpen===1?"":"s"}`;
   if(!list.length){ $("#content").innerHTML = '<div class="empty">No epics match.</div>'; return; }
 
   if(VIEW === "table"){

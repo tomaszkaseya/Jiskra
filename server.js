@@ -109,7 +109,7 @@ const server = http.createServer(async (req, res) => {
   try {
     // --- API ---
     if (url.pathname === "/api/config" && req.method === "GET") {
-      return sendJson(res, 200, { gates: CONFIG.gates, projects: CONFIG.projects, jiraBase: CONFIG.jira.baseUrl });
+      return sendJson(res, 200, { gates: CONFIG.gates, gateDescriptions: CONFIG.gateDescriptions || {}, projects: CONFIG.projects, jiraBase: CONFIG.jira.baseUrl });
     }
     if (url.pathname === "/api/epics" && req.method === "GET") {
       const gate = url.searchParams.get("gate");
