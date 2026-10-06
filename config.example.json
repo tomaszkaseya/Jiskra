@@ -1,0 +1,11 @@
+{
+  "jira": {
+    "baseUrl": "https://your-site.atlassian.net",
+    "email": "you@example.com",
+    "token": "YOUR_ATLASSIAN_API_TOKEN",
+    "targetQuarterField": "customfield_14106"
+  },
+  "projects": ["ONP", "OA"],
+  "gates": [3, 4, 5],
+  "port": 4777
+}

@@ -8,6 +8,7 @@ plus a local daily-status log and risk tracker per epic (stored outside Jira).
 ## Run
 
 ```
+copy config.example.json config.json   # then fill in your Jira details
 node server.js
 ```
 
