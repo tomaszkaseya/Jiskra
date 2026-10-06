@@ -1,0 +1,415 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Jiskra</title>
+<style>
+:root{
+  --bg:#f5f6f8; --card:#ffffff; --text:#1b2430; --muted:#6b7684; --border:#dde2e8;
+  --accent:#2563eb; --accent-soft:#e8effd;
+  --green:#15803d; --green-soft:#e5f5ec;
+  --yellow:#a16207; --yellow-soft:#fdf3d7;
+  --red:#b91c1c; --red-soft:#fdeaea;
+  --gray-soft:#eef0f3;
+}
+@media (prefers-color-scheme: dark){
+  :root{
+    --bg:#13161b; --card:#1c2128; --text:#e6e9ee; --muted:#96a0ac; --border:#323a45;
+    --accent:#6ba0ff; --accent-soft:#1d2d4d;
+    --green:#5fd08a; --green-soft:#17301f;
+    --yellow:#e8c45a; --yellow-soft:#39301300;
+    --yellow-soft:#393013; --red:#f08a8a; --red-soft:#3d1a1a;
+    --gray-soft:#262c34;
+  }
+}
+*{box-sizing:border-box}
+body{margin:0;font:14px/1.5 "Segoe UI",system-ui,sans-serif;background:var(--bg);color:var(--text)}
+header{display:flex;align-items:center;gap:16px;padding:14px 24px;border-bottom:1px solid var(--border);background:var(--card);position:sticky;top:0;z-index:5}
+header h1{font-size:17px;margin:0;letter-spacing:.3px}
+header h1 span{color:var(--accent)}
+.tabs{display:flex;gap:4px}
+.tab{padding:7px 18px;border:1px solid var(--border);border-radius:8px;background:none;color:var(--text);cursor:pointer;font-size:14px}
+.tab.active{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:600}
+.toolbar{margin-left:auto;display:flex;gap:10px;align-items:center}
+select,input,textarea{background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:6px;padding:6px 8px;font:inherit}
+button.primary{background:var(--accent);color:#fff;border:none;border-radius:6px;padding:7px 14px;cursor:pointer;font:inherit}
+button.ghost{background:none;border:1px solid var(--border);color:var(--muted);border-radius:6px;padding:4px 10px;cursor:pointer;font-size:12px}
+button.ghost:hover{color:var(--text)}
+main{max-width:1100px;margin:0 auto;padding:20px 24px 80px}
+.summary{color:var(--muted);margin:4px 0 16px}
+.epic{background:var(--card);border:1px solid var(--border);border-radius:10px;margin-bottom:14px;overflow:hidden}
+.epic-head{display:flex;align-items:center;gap:12px;padding:12px 16px;cursor:pointer;flex-wrap:wrap}
+.epic-head:hover{background:var(--gray-soft)}
+.key{font-weight:700;color:var(--accent);text-decoration:none;white-space:nowrap}
+.epic-title{font-weight:600;flex:1;min-width:200px}
+.badge{padding:2px 9px;border-radius:999px;font-size:12px;white-space:nowrap;background:var(--gray-soft);color:var(--muted)}
+.badge.q{background:var(--accent-soft);color:var(--accent);font-weight:600}
+.badge.cat-done{background:var(--green-soft);color:var(--green)}
+.badge.cat-indeterminate{background:var(--yellow-soft);color:var(--yellow)}
+.badge.cat-new{background:var(--gray-soft);color:var(--muted)}
+.badge.risk-open{background:var(--red-soft);color:var(--red);font-weight:600}
+.epic-body{border-top:1px solid var(--border);padding:14px 16px;display:grid;grid-template-columns:1fr 1fr;gap:20px}
+@media (max-width:800px){.epic-body{grid-template-columns:1fr}}
+h3{margin:0 0 8px;font-size:13px;text-transform:uppercase;letter-spacing:.6px;color:var(--muted)}
+.entry{border:1px solid var(--border);border-radius:8px;padding:8px 10px;margin-bottom:8px;background:var(--bg)}
+.entry .meta{font-size:12px;color:var(--muted);display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.entry .meta .spacer{margin-left:auto}
+.risk-sev{font-weight:700}
+.sev-High{color:var(--red)} .sev-Medium{color:var(--yellow)} .sev-Low{color:var(--green)}
+.risk.closed{opacity:.55}
+.risk.closed .risk-title{text-decoration:line-through}
+.mitigation{margin-top:6px;padding:6px 8px;border-left:3px solid var(--accent);background:var(--accent-soft);border-radius:0 6px 6px 0;font-size:13px}
+form.add{display:grid;gap:6px;margin-top:10px}
+form.add .row{display:flex;gap:6px}
+form.add .row > *{flex:1}
+textarea{resize:vertical;min-height:38px}
+.empty{color:var(--muted);font-style:italic;font-size:13px}
+.loading{text-align:center;color:var(--muted);padding:40px}
+.error{background:var(--red-soft);color:var(--red);padding:12px 16px;border-radius:8px;margin-bottom:14px;white-space:pre-wrap}
+.proj-head{margin:22px 0 10px;font-size:15px;font-weight:700;color:var(--muted)}
+.viewtoggle{display:flex;border:1px solid var(--border);border-radius:8px;overflow:hidden}
+.viewtoggle button{border:none;background:none;color:var(--muted);padding:6px 12px;cursor:pointer;font:inherit}
+.viewtoggle button.active{background:var(--accent);color:#fff}
+table.matrix{width:100%;border-collapse:collapse;background:var(--card);border:1px solid var(--border);border-radius:10px;overflow:hidden}
+.matrix th,.matrix td{border-bottom:1px solid var(--border);padding:8px 12px;text-align:left;vertical-align:middle}
+.matrix thead th{font-size:12px;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);background:var(--gray-soft)}
+.matrix th.qcol,.matrix td.qcell{width:170px;border-left:1px solid var(--border)}
+.matrix tbody tr.epic-row{cursor:pointer}
+.matrix tbody tr.epic-row:hover{background:var(--gray-soft)}
+.matrix td.namecell{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.matrix tr.proj-row td{font-weight:700;color:var(--muted);background:var(--gray-soft);font-size:13px}
+.matrix tr.detail-row > td{padding:0;background:var(--bg)}
+.matrix tr.detail-row .epic-body{border-top:none}
+.pbar{display:flex;align-items:center;gap:8px}
+.pbar .track{display:block;flex:1;height:9px;border-radius:5px;background:var(--gray-soft);border:1px solid var(--border);overflow:hidden}
+.pbar .fill{display:block;height:100%;background:var(--green)}
+.pbar .num{font-size:12px;color:var(--muted);white-space:nowrap;font-variant-numeric:tabular-nums}
+.matrix tfoot td{font-weight:600;background:var(--gray-soft)}
+</style>
+</head>
+<body>
+<header>
+  <h1>Jiskra <span>✦</span></h1>
+  <div class="tabs" id="tabs"></div>
+  <div class="toolbar">
+    <div class="viewtoggle" id="viewToggle">
+      <button data-view="table">Table</button>
+      <button data-view="list">List</button>
+    </div>
+    <select id="quarterFilter"><option value="">All quarters</option></select>
+    <select id="riskFilter">
+      <option value="">All epics</option>
+      <option value="open-risks">With open risks</option>
+    </select>
+    <button class="ghost" id="refresh">↻ Refresh</button>
+  </div>
+</header>
+<main>
+  <div class="summary" id="summary"></div>
+  <div id="content" class="loading">Loading…</div>
+</main>
+
+<script>
+let CFG = null, GATE = null, EPICS = [], OPEN = new Set();
+let VIEW = localStorage.getItem("view") || "table";
+let EDITING = null; // "status:<id>" | "risk:<id>"
+
+const $ = s => document.querySelector(s);
+const esc = s => (s ?? "").toString().replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const today = () => new Date().toISOString().slice(0,10);
+
+async function api(path, opts){
+  const r = await fetch(path, opts);
+  const j = await r.json().catch(()=>({}));
+  if(!r.ok) throw new Error(j.error || r.status);
+  return j;
+}
+
+async function init(){
+  CFG = await api("/api/config");
+  GATE = localStorage.getItem("gate") || String(CFG.gates[0]);
+  if(!CFG.gates.map(String).includes(GATE)) GATE = String(CFG.gates[0]);
+  renderTabs();
+  renderViewToggle();
+  $("#refresh").onclick = load;
+  $("#quarterFilter").onchange = render;
+  $("#riskFilter").onchange = render;
+  await load();
+}
+
+function renderViewToggle(){
+  const t = $("#viewToggle");
+  t.querySelectorAll("button").forEach(b => {
+    b.classList.toggle("active", b.dataset.view === VIEW);
+    b.onclick = () => { VIEW = b.dataset.view; localStorage.setItem("view", VIEW); renderViewToggle(); render(); };
+  });
+}
+
+function renderTabs(){
+  $("#tabs").innerHTML = CFG.gates.map(g =>
+    `<button class="tab ${String(g)===GATE?"active":""}" data-g="${g}">Gate ${g}</button>`).join("");
+  $("#tabs").querySelectorAll(".tab").forEach(b => b.onclick = () => {
+    GATE = b.dataset.g; localStorage.setItem("gate", GATE); renderTabs(); load();
+  });
+}
+
+async function load(){
+  $("#content").innerHTML = '<div class="loading">Loading Gate '+esc(GATE)+' epics from Jira…</div>';
+  try{
+    const d = await api("/api/epics?gate="+encodeURIComponent(GATE));
+    EPICS = d.epics;
+    const quarters = [...new Set(EPICS.map(e=>e.targetQuarter).filter(Boolean))].sort();
+    const qf = $("#quarterFilter"); const cur = qf.value;
+    qf.innerHTML = '<option value="">All quarters</option>' + quarters.map(q=>`<option ${q===cur?"selected":""}>${esc(q)}</option>`).join("");
+    render();
+  }catch(e){
+    $("#content").innerHTML = '<div class="error">Failed to load from Jira: '+esc(e.message)+'</div>';
+  }
+}
+
+function openRisks(e){ return e.risks.filter(r=>r.status==="open"); }
+
+function render(){
+  const q = $("#quarterFilter").value, rf = $("#riskFilter").value;
+  let list = EPICS;
+  if(q) list = list.filter(e=>e.targetQuarter===q);
+  if(rf==="open-risks") list = list.filter(e=>openRisks(e).length);
+  const totalOpen = list.reduce((n,e)=>n+openRisks(e).length,0);
+  $("#summary").textContent = `Gate ${GATE} · ${list.length} epic${list.length===1?"":"s"} · ${totalOpen} open risk${totalOpen===1?"":"s"}`;
+  if(!list.length){ $("#content").innerHTML = '<div class="empty">No epics match.</div>'; return; }
+
+  if(VIEW === "table"){
+    $("#content").innerHTML = matrixHtml(list);
+  }else{
+    const byProj = {};
+    list.forEach(e => (byProj[e.project] ??= []).push(e));
+    $("#content").innerHTML = Object.keys(byProj).sort().map(p =>
+      `<div class="proj-head">${esc(p)}</div>` + byProj[p].map(epicHtml).join("")
+    ).join("");
+  }
+  bindEvents();
+}
+
+function pbarHtml(p){
+  if(!p || !p.total) return '<span class="pbar"><span class="num">–</span></span>';
+  const pct = Math.round(100*p.done/p.total);
+  return `<span class="pbar" title="${p.done} / ${p.total} issues done"><span class="track"><span class="fill" style="width:${pct}%"></span></span><span class="num">${pct}%</span></span>`;
+}
+
+function matrixHtml(list){
+  const quarters = [...new Set(list.map(e=>e.targetQuarter).filter(Boolean))].sort();
+  const noQ = list.some(e=>!e.targetQuarter);
+  const cols = noQ ? [...quarters, null] : quarters;
+  const byProj = {};
+  list.forEach(e => (byProj[e.project] ??= []).push(e));
+  const colSpan = cols.length + 1;
+
+  const rows = Object.keys(byProj).sort().map(p =>
+    `<tr class="proj-row"><td colspan="${colSpan}">${esc(p)}</td></tr>` +
+    byProj[p].map(e => {
+      const risks = openRisks(e);
+      const cells = cols.map(q =>
+        `<td class="qcell">${(e.targetQuarter||null)===q ? pbarHtml(e.progress) : ""}</td>`).join("");
+      const detail = OPEN.has(e.key)
+        ? `<tr class="detail-row epic" data-key="${e.key}"><td colspan="${colSpan}">${epicBody(e)}</td></tr>` : "";
+      return `<tr class="epic-row epic" data-key="${e.key}" data-toggle="${e.key}">
+        <td class="namecell">
+          <a class="key" href="${esc(e.url)}" target="_blank" onclick="event.stopPropagation()">${e.key}</a>
+          <span>${esc(e.summary)}</span>
+          <span class="badge cat-${esc(e.statusCategory)}">${esc(e.status)}</span>
+          ${risks.length?`<span class="badge risk-open">⚠ ${risks.length}</span>`:""}
+        </td>${cells}</tr>` + detail;
+    }).join("")
+  ).join("");
+
+  const totals = cols.map(q => {
+    const inQ = list.filter(e => (e.targetQuarter||null)===q);
+    const agg = inQ.reduce((a,e)=>({done:a.done+e.progress.done,total:a.total+e.progress.total}),{done:0,total:0});
+    return `<td class="qcell">${pbarHtml(agg)}</td>`;
+  }).join("");
+
+  return `<table class="matrix">
+    <thead><tr><th>Epic</th>${cols.map(q=>`<th class="qcol">${q?esc(q):"No quarter"}</th>`).join("")}</tr></thead>
+    <tbody>${rows}</tbody>
+    <tfoot><tr><td>Total</td>${totals}</tr></tfoot>
+  </table>`;
+}
+
+function epicHtml(e){
+  const open = OPEN.has(e.key);
+  const risks = openRisks(e);
+  const lastStatus = e.statuses[0];
+  return `<div class="epic" data-key="${e.key}">
+    <div class="epic-head" data-toggle="${e.key}">
+      <a class="key" href="${esc(e.url)}" target="_blank" onclick="event.stopPropagation()">${e.key}</a>
+      <span class="epic-title">${esc(e.summary)}</span>
+      ${e.progress && e.progress.total?`<span style="min-width:110px">${pbarHtml(e.progress)}</span>`:""}
+      ${e.targetQuarter?`<span class="badge q">${esc(e.targetQuarter)}</span>`:""}
+      <span class="badge cat-${esc(e.statusCategory)}">${esc(e.status)}</span>
+      ${risks.length?`<span class="badge risk-open">⚠ ${risks.length} risk${risks.length===1?"":"s"}</span>`:""}
+      ${lastStatus?`<span class="badge" title="${esc(lastStatus.text)}">last update ${esc(lastStatus.date)}</span>`:""}
+    </div>
+    ${open?epicBody(e):""}
+  </div>`;
+}
+
+function epicBody(e){
+  return `<div class="epic-body">
+    <section>
+      <h3>Daily status</h3>
+      ${e.statuses.length ? e.statuses.map(s => statusEntryHtml(e,s)).join("") : '<div class="empty">No status updates yet.</div>'}
+      <form class="add" data-add-status="${e.key}">
+        <div class="row"><input type="date" name="date" value="${today()}" required><input name="author" placeholder="Who reported (optional)"></div>
+        <textarea name="text" placeholder="Status for today…" required></textarea>
+        <div class="row"><button class="primary">Add status</button></div>
+      </form>
+    </section>
+    <section>
+      <h3>Risks</h3>
+      ${e.risks.length ? e.risks.map(r=>riskHtml(e,r)).join("") : '<div class="empty">No risks. 🎉</div>'}
+      <form class="add" data-add-risk="${e.key}">
+        <input name="title" placeholder="Risk title" required>
+        <textarea name="description" placeholder="Description / impact"></textarea>
+        <textarea name="mitigation" placeholder="Mitigation plan"></textarea>
+        <div class="row">
+          <select name="severity"><option>High</option><option selected>Medium</option><option>Low</option></select>
+          <input name="owner" placeholder="Owner">
+        </div>
+        <div class="row"><button class="primary">Add risk</button></div>
+      </form>
+    </section>
+  </div>`;
+}
+
+function statusEntryHtml(e,s){
+  if(EDITING === "status:"+s.id){
+    return `<form class="entry add" data-edit-status="${s.id}" data-epic="${e.key}">
+      <div class="row"><input type="date" name="date" value="${esc(s.date)}" required><input name="author" value="${esc(s.author||"")}" placeholder="Who reported (optional)"></div>
+      <textarea name="text" required>${esc(s.text)}</textarea>
+      <div class="row"><button class="primary">Save</button><button type="button" class="ghost" data-cancel-edit>Cancel</button></div>
+    </form>`;
+  }
+  return `<div class="entry">
+    <div class="meta"><strong>${esc(s.date)}</strong>${s.author?` · ${esc(s.author)}`:""}
+      <span class="spacer"></span>
+      <button class="ghost" data-edit="status:${s.id}">✎</button>
+      <button class="ghost" data-del-status="${s.id}">✕</button></div>
+    <div>${esc(s.text)}</div>
+  </div>`;
+}
+
+function riskHtml(e,r){
+  if(EDITING === "risk:"+r.id){
+    const sev = s => s===r.severity ? "selected" : "";
+    return `<form class="entry add" data-edit-risk="${r.id}" data-epic="${e.key}">
+      <input name="title" value="${esc(r.title)}" required>
+      <textarea name="description" placeholder="Description / impact">${esc(r.description||"")}</textarea>
+      <textarea name="mitigation" placeholder="Mitigation plan">${esc(r.mitigation||"")}</textarea>
+      <div class="row">
+        <select name="severity"><option ${sev("High")}>High</option><option ${sev("Medium")}>Medium</option><option ${sev("Low")}>Low</option></select>
+        <input name="owner" value="${esc(r.owner||"")}" placeholder="Owner">
+      </div>
+      <div class="row"><button class="primary">Save</button><button type="button" class="ghost" data-cancel-edit>Cancel</button></div>
+    </form>`;
+  }
+  const closed = r.status!=="open";
+  return `<div class="entry risk ${closed?"closed":""}">
+    <div class="meta">
+      <span class="risk-sev sev-${esc(r.severity)}">${esc(r.severity)}</span>
+      <strong class="risk-title">${esc(r.title)}</strong>
+      ${r.owner?`· ${esc(r.owner)}`:""}
+      <span class="spacer"></span>
+      <span>${esc((r.createdAt||"").slice(0,10))}${r.closedAt?` → closed ${esc(r.closedAt.slice(0,10))}`:""}</span>
+      <button class="ghost" data-edit="risk:${r.id}">✎</button>
+      <button class="ghost" data-risk-toggle="${r.id}" data-epic="${e.key}">${closed?"Reopen":"Close"}</button>
+      <button class="ghost" data-del-risk="${r.id}" data-epic="${e.key}">✕</button>
+    </div>
+    ${r.description?`<div>${esc(r.description)}</div>`:""}
+    ${r.mitigation?`<div class="mitigation"><strong>Mitigation:</strong> ${esc(r.mitigation)}</div>`:""}
+  </div>`;
+}
+
+function bindEvents(){
+  document.querySelectorAll("[data-toggle]").forEach(h => h.onclick = () => {
+    const k = h.dataset.toggle;
+    OPEN.has(k) ? OPEN.delete(k) : OPEN.add(k);
+    render();
+  });
+  document.querySelectorAll("form[data-add-status]").forEach(f => f.onsubmit = async ev => {
+    ev.preventDefault();
+    const key = f.dataset.addStatus, fd = new FormData(f);
+    await api(`/api/epic/${key}/status`,{method:"POST",headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({date:fd.get("date"),author:fd.get("author"),text:fd.get("text")})});
+    await reloadLocal(key);
+  });
+  document.querySelectorAll("form[data-add-risk]").forEach(f => f.onsubmit = async ev => {
+    ev.preventDefault();
+    const key = f.dataset.addRisk, fd = new FormData(f);
+    await api(`/api/epic/${key}/risk`,{method:"POST",headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({title:fd.get("title"),description:fd.get("description"),mitigation:fd.get("mitigation"),severity:fd.get("severity"),owner:fd.get("owner"),status:"open"})});
+    await reloadLocal(key);
+  });
+  document.querySelectorAll("[data-edit]").forEach(b => b.onclick = ev => {
+    ev.stopPropagation();
+    EDITING = b.dataset.edit;
+    render();
+  });
+  document.querySelectorAll("[data-cancel-edit]").forEach(b => b.onclick = ev => {
+    ev.stopPropagation();
+    EDITING = null;
+    render();
+  });
+  document.querySelectorAll("form[data-edit-status]").forEach(f => f.onsubmit = async ev => {
+    ev.preventDefault();
+    const fd = new FormData(f);
+    await api(`/api/epic/${f.dataset.epic}/status/${f.dataset.editStatus}`,{method:"PUT",headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({date:fd.get("date"),author:fd.get("author"),text:fd.get("text")})});
+    EDITING = null;
+    await reloadLocal(f.dataset.epic);
+  });
+  document.querySelectorAll("form[data-edit-risk]").forEach(f => f.onsubmit = async ev => {
+    ev.preventDefault();
+    const fd = new FormData(f);
+    await api(`/api/epic/${f.dataset.epic}/risk/${f.dataset.editRisk}`,{method:"PUT",headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({title:fd.get("title"),description:fd.get("description"),mitigation:fd.get("mitigation"),severity:fd.get("severity"),owner:fd.get("owner")})});
+    EDITING = null;
+    await reloadLocal(f.dataset.epic);
+  });
+  document.querySelectorAll("[data-del-status]").forEach(b => b.onclick = async ev => {
+    ev.stopPropagation();
+    if(!confirm("Delete this status entry?")) return;
+    const key = b.closest(".epic").dataset.key;
+    await api(`/api/epic/${key}/status/${b.dataset.delStatus}`,{method:"DELETE"});
+    await reloadLocal(key);
+  });
+  document.querySelectorAll("[data-del-risk]").forEach(b => b.onclick = async ev => {
+    ev.stopPropagation();
+    if(!confirm("Delete this risk?")) return;
+    await api(`/api/epic/${b.dataset.epic}/risk/${b.dataset.delRisk}`,{method:"DELETE"});
+    await reloadLocal(b.dataset.epic);
+  });
+  document.querySelectorAll("[data-risk-toggle]").forEach(b => b.onclick = async ev => {
+    ev.stopPropagation();
+    const key = b.dataset.epic;
+    const epic = EPICS.find(x=>x.key===key);
+    const risk = epic.risks.find(x=>x.id===b.dataset.riskToggle);
+    await api(`/api/epic/${key}/risk/${risk.id}`,{method:"PUT",headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({status: risk.status==="open" ? "closed" : "open"})});
+    await reloadLocal(key);
+  });
+}
+
+// Refresh one epic's local data without re-hitting Jira for the whole gate.
+async function reloadLocal(key){
+  const d = await api("/api/epics?gate="+encodeURIComponent(GATE));
+  const fresh = d.epics.find(x=>x.key===key);
+  const idx = EPICS.findIndex(x=>x.key===key);
+  if(fresh && idx>-1){ EPICS[idx].statuses = fresh.statuses; EPICS[idx].risks = fresh.risks; }
+  render();
+}
+
+init();
+</script>
+</body>
+</html>
