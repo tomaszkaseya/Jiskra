@@ -41,7 +41,8 @@ async function fetchGateEpics(gate) {
   const labels = CONFIG.projects.map((p) => `${p}-G${gate}`);
   const jql = `project in (${CONFIG.projects.join(",")}) AND issuetype = Epic AND labels in (${labels.join(",")}) ORDER BY project, key`;
   const qf = CONFIG.jira.targetQuarterField;
-  const fields = ["summary", "status", "labels", "duedate", "assignee", qf].join(",");
+  const ragF = CONFIG.jira.ragField;
+  const fields = ["summary", "status", "labels", "duedate", "assignee", qf, ragF].filter(Boolean).join(",");
   const data = await jiraGet(
     `/rest/api/3/search/jql?jql=${encodeURIComponent(jql)}&fields=${fields}&maxResults=200`
   );
@@ -55,6 +56,7 @@ async function fetchGateEpics(gate) {
     duedate: i.fields.duedate,
     assignee: i.fields.assignee ? i.fields.assignee.displayName : null,
     targetQuarter: i.fields[qf] ? i.fields[qf].value : null,
+    rag: ragF && i.fields[ragF] ? i.fields[ragF].value : null,
     url: CONFIG.jira.baseUrl + "/browse/" + i.key,
     progress: { done: 0, total: 0 },
   }));

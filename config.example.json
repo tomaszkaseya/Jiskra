@@ -3,7 +3,8 @@
     "baseUrl": "https://your-site.atlassian.net",
     "email": "you@example.com",
     "token": "YOUR_ATLASSIAN_API_TOKEN",
-    "targetQuarterField": "customfield_14106"
+    "targetQuarterField": "customfield_14106",
+    "ragField": "customfield_14707"
   },
   "projects": ["ONP", "OA"],
   "gates": [3, 4, 5],

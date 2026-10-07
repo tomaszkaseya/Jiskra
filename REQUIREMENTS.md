@@ -27,8 +27,10 @@ lacks: a per-epic daily status log and a simple risk tracker, kept entirely outs
 - One tab per configured gate. Selecting a tab loads, live from Jira, all epics across
   the configured projects that carry that gate's label.
 - Epics are grouped by project and show: key (link to Jira), summary, Jira status
-  (color-coded by status category), target launch quarter, open-risk count, and the
-  date of the most recent local status update.
+  (color-coded by status category), RAG status (a colored dot read from the Jira
+  "Operating Status" select field, `customfield_14707` — configurable as
+  `jira.ragField`), target launch quarter, open-risk count, and the date of the most
+  recent local status update.
 - Filters: by target launch quarter; "only epics with open risks".
 - Two switchable views per gate (choice remembered per browser):
   - **Table (default)**: a matrix of epics (rows, grouped by project) × target launch
