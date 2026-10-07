@@ -53,7 +53,7 @@ main{max-width:1100px;margin:0 auto;padding:20px 24px 80px}
 .rag-green{background:#22a858;border-color:#22a858}
 .rag-amber{background:#eab308;border-color:#eab308}
 .rag-red{background:#dc2626;border-color:#dc2626}
-.rag-none{background:transparent}
+.rag-grey{background:#9aa3ad;border-color:#9aa3ad}
 .epic-body{border-top:1px solid var(--border);padding:14px 16px;display:grid;grid-template-columns:1fr 1fr;gap:20px}
 @media (max-width:800px){.epic-body{grid-template-columns:1fr}}
 h3{margin:0 0 8px;font-size:13px;text-transform:uppercase;letter-spacing:.6px;color:var(--muted)}
@@ -206,8 +206,8 @@ function render(){
 }
 
 function ragHtml(rag){
-  if(!rag) return "";
-  const cls = /green/i.test(rag) ? "rag-green" : /amber|yellow/i.test(rag) ? "rag-amber" : /red/i.test(rag) ? "rag-red" : "rag-none";
+  if(!rag) return `<span class="rag rag-grey" title="RAG: not set (not started)"></span>`;
+  const cls = /green/i.test(rag) ? "rag-green" : /amber|yellow/i.test(rag) ? "rag-amber" : /red/i.test(rag) ? "rag-red" : "rag-grey";
   return `<span class="rag ${cls}" title="RAG: ${esc(rag)}"></span>`;
 }
 
