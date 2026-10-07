@@ -51,6 +51,8 @@ lacks: a per-epic daily status log and a simple risk tracker, kept entirely outs
   Closed risks stay visible (struck through) for history.
 - Risks can be edited in place (all fields) or deleted. Open risks surface as a
   warning badge on the epic row.
+- Each risk has its own **update log**: dated free-text entries (e.g. mitigation
+  progress reported at the daily), listed newest-first, editable and deletable.
 - Deliberately simple — no workflow, no sync to Jira.
 
 ### 3.4 Data and integration rules

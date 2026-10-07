@@ -123,6 +123,40 @@ const server = http.createServer(async (req, res) => {
       return sendJson(res, 200, { epics });
     }
 
+    // /api/epic/:key/risk/:riskId/update (+ /:id for PUT/DELETE) - dated updates on a risk
+    const mu = url.pathname.match(/^\/api\/epic\/([A-Z0-9-]+)\/risk\/([\w-]+)\/update(?:\/([\w-]+))?$/);
+    if (mu) {
+      const [, key, riskId, id] = mu;
+      const db = loadDb();
+      const risk = epicRecord(db, key).risks.find((r) => r.id === riskId);
+      if (!risk) return sendJson(res, 404, { error: "risk not found" });
+      if (!risk.updates) risk.updates = [];
+      const now = new Date().toISOString();
+
+      if (req.method === "POST") {
+        const body = await readBody(req);
+        const item = { id: Math.random().toString(36).slice(2, 10), createdAt: now, ...body };
+        risk.updates.unshift(item);
+        saveDb(db);
+        return sendJson(res, 201, item);
+      }
+      if (req.method === "PUT" && id) {
+        const item = risk.updates.find((x) => x.id === id);
+        if (!item) return sendJson(res, 404, { error: "not found" });
+        Object.assign(item, await readBody(req), { updatedAt: now });
+        saveDb(db);
+        return sendJson(res, 200, item);
+      }
+      if (req.method === "DELETE" && id) {
+        const idx = risk.updates.findIndex((x) => x.id === id);
+        if (idx === -1) return sendJson(res, 404, { error: "not found" });
+        risk.updates.splice(idx, 1);
+        saveDb(db);
+        return sendJson(res, 200, { ok: true });
+      }
+      return sendJson(res, 405, { error: "method not allowed" });
+    }
+
     // /api/epic/:key/status  |  /api/epic/:key/risk  (+ /:id for PUT/DELETE)
     const m = url.pathname.match(/^\/api\/epic\/([A-Z0-9-]+)\/(status|risk)(?:\/([\w-]+))?$/);
     if (m) {

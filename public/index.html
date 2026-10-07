@@ -60,6 +60,14 @@ h3{margin:0 0 8px;font-size:13px;text-transform:uppercase;letter-spacing:.6px;co
 .risk.closed{opacity:.55}
 .risk.closed .risk-title{text-decoration:line-through}
 .mitigation{margin-top:6px;padding:6px 8px;border-left:3px solid var(--accent);background:var(--accent-soft);border-radius:0 6px 6px 0;font-size:13px}
+.risk-updates{margin-top:8px;padding-left:10px;border-left:2px solid var(--border)}
+.risk-updates h4{margin:0 0 4px;font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:var(--muted)}
+.rupd{font-size:13px;margin-bottom:4px;display:flex;gap:6px;align-items:baseline;flex-wrap:wrap}
+.rupd .d{color:var(--muted);white-space:nowrap;font-size:12px}
+.rupd .t{flex:1;min-width:150px}
+form.rupd-add{display:flex;gap:6px;margin-top:4px}
+form.rupd-add input[type=date]{width:130px}
+form.rupd-add input[name=text]{flex:1}
 form.add{display:grid;gap:6px;margin-top:10px}
 form.add .row{display:flex;gap:6px}
 form.add .row > *{flex:1}
@@ -328,6 +336,32 @@ function riskHtml(e,r){
     </div>
     ${r.description?`<div>${esc(r.description)}</div>`:""}
     ${r.mitigation?`<div class="mitigation"><strong>Mitigation:</strong> ${esc(r.mitigation)}</div>`:""}
+    <div class="risk-updates">
+      ${(r.updates||[]).length?`<h4>Updates</h4>`:""}
+      ${(r.updates||[]).map(u => riskUpdateHtml(e,r,u)).join("")}
+      <form class="rupd-add" data-add-rupd="${r.id}" data-epic="${e.key}">
+        <input type="date" name="date" value="${today()}" required>
+        <input name="text" placeholder="Update on this risk…" required>
+        <button class="ghost">Add</button>
+      </form>
+    </div>
+  </div>`;
+}
+
+function riskUpdateHtml(e,r,u){
+  if(EDITING === "rupd:"+u.id){
+    return `<form class="rupd-add" data-edit-rupd="${u.id}" data-risk="${r.id}" data-epic="${e.key}">
+      <input type="date" name="date" value="${esc(u.date)}" required>
+      <input name="text" value="${esc(u.text)}" required>
+      <button class="ghost">Save</button>
+      <button type="button" class="ghost" data-cancel-edit>Cancel</button>
+    </form>`;
+  }
+  return `<div class="rupd">
+    <span class="d">${esc(u.date)}</span>
+    <span class="t">${esc(u.text)}${u.author?` <span class="d">· ${esc(u.author)}</span>`:""}</span>
+    <button class="ghost" data-edit="rupd:${u.id}">✎</button>
+    <button class="ghost" data-del-rupd="${u.id}" data-risk="${r.id}" data-epic="${e.key}">✕</button>
   </div>`;
 }
 
@@ -376,6 +410,27 @@ function bindEvents(){
       body:JSON.stringify({title:fd.get("title"),description:fd.get("description"),mitigation:fd.get("mitigation"),severity:fd.get("severity"),owner:fd.get("owner")})});
     EDITING = null;
     await reloadLocal(f.dataset.epic);
+  });
+  document.querySelectorAll("form[data-add-rupd]").forEach(f => f.onsubmit = async ev => {
+    ev.preventDefault();
+    const fd = new FormData(f);
+    await api(`/api/epic/${f.dataset.epic}/risk/${f.dataset.addRupd}/update`,{method:"POST",headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({date:fd.get("date"),text:fd.get("text")})});
+    await reloadLocal(f.dataset.epic);
+  });
+  document.querySelectorAll("form[data-edit-rupd]").forEach(f => f.onsubmit = async ev => {
+    ev.preventDefault();
+    const fd = new FormData(f);
+    await api(`/api/epic/${f.dataset.epic}/risk/${f.dataset.risk}/update/${f.dataset.editRupd}`,{method:"PUT",headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({date:fd.get("date"),text:fd.get("text")})});
+    EDITING = null;
+    await reloadLocal(f.dataset.epic);
+  });
+  document.querySelectorAll("[data-del-rupd]").forEach(b => b.onclick = async ev => {
+    ev.stopPropagation();
+    if(!confirm("Delete this risk update?")) return;
+    await api(`/api/epic/${b.dataset.epic}/risk/${b.dataset.risk}/update/${b.dataset.delRupd}`,{method:"DELETE"});
+    await reloadLocal(b.dataset.epic);
   });
   document.querySelectorAll("[data-del-status]").forEach(b => b.onclick = async ev => {
     ev.stopPropagation();
