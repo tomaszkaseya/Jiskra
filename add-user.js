@@ -1,11 +1,16 @@
-// Create or update a Jiskra user: node add-user.js <username> <password>
+// Create or update a Jiskra user.
+//   node add-user.js <username> <password>          -> writes to data/jiskra.db
+//   node add-user.js <username> <password> --print  -> prints "username:salt:hash"
+//                                                      for the AUTH_USERS env var
 const fs = require("fs");
 const path = require("path");
 const crypto = require("crypto");
 
-const [username, password] = process.argv.slice(2);
+const args = process.argv.slice(2);
+const printOnly = args.includes("--print");
+const [username, password] = args.filter((a) => a !== "--print");
 if (!username || !password) {
-  console.error("Usage: node add-user.js <username> <password>");
+  console.error("Usage: node add-user.js <username> <password> [--print]");
   process.exit(1);
 }
 if (password.length < 8) {
@@ -13,17 +18,19 @@ if (password.length < 8) {
   process.exit(1);
 }
 
-const dataDir = path.join(__dirname, "data");
-const usersFile = path.join(dataDir, "users.json");
-if (!fs.existsSync(dataDir)) fs.mkdirSync(dataDir);
+const salt = crypto.randomBytes(16).toString("hex");
+const hash = crypto.scryptSync(password, Buffer.from(salt, "hex"), 64).toString("hex");
 
-const users = fs.existsSync(usersFile) ? JSON.parse(fs.readFileSync(usersFile, "utf8")) : [];
-const salt = crypto.randomBytes(16);
-const hash = crypto.scryptSync(password, salt, 64);
-const user = { username, salt: salt.toString("hex"), hash: hash.toString("hex") };
+if (printOnly) {
+  console.log(`${username}:${salt}:${hash}`);
+  process.exit(0);
+}
 
-const idx = users.findIndex((u) => u.username === username);
-if (idx >= 0) { users[idx] = user; console.log(`Updated user '${username}'.`); }
-else { users.push(user); console.log(`Added user '${username}'.`); }
-
-fs.writeFileSync(usersFile, JSON.stringify(users, null, 2));
+const { DatabaseSync } = require("node:sqlite");
+const dataDir = process.env.DATA_DIR || path.join(__dirname, "data");
+if (!fs.existsSync(dataDir)) fs.mkdirSync(dataDir, { recursive: true });
+const db = new DatabaseSync(path.join(dataDir, "jiskra.db"));
+db.exec("CREATE TABLE IF NOT EXISTS users (username TEXT PRIMARY KEY, salt TEXT NOT NULL, hash TEXT NOT NULL)");
+db.prepare("INSERT INTO users (username,salt,hash) VALUES (?,?,?) ON CONFLICT(username) DO UPDATE SET salt=excluded.salt, hash=excluded.hash")
+  .run(username, salt, hash);
+console.log(`Saved user '${username}' in data/jiskra.db`);

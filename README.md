@@ -12,7 +12,11 @@ copy config.example.json config.json   # then fill in your Jira details
 node server.js
 ```
 
-Open http://localhost:4777 (Node 18+, no dependencies).
+Open http://localhost:4777 (Node 22.5+, no dependencies — data lives in SQLite via the
+built-in `node:sqlite`).
+
+Deploying? See [DEPLOYMENT.md](DEPLOYMENT.md) — configuration via environment
+variables, persistent volume, auth setup.
 
 ## How it works
 
@@ -20,8 +24,9 @@ Open http://localhost:4777 (Node 18+, no dependencies).
   across the projects listed in `config.json`.
 - Target launch quarter comes from the Jira custom field `Target Launch Quarter`
   (`customfield_14106`).
-- Daily statuses and risks are stored locally in `data/db.json`, keyed by epic key.
-  Nothing is written back to Jira.
+- Daily statuses, risks and users are stored locally in `data/jiskra.db` (SQLite).
+  Nothing is written back to Jira. Legacy `data/db.json` / `data/users.json` files are
+  migrated automatically on first start.
 
 ## Config (`config.json`, gitignored — contains the Jira API token)
 
@@ -48,6 +53,11 @@ With `auth.enabled: true`, every `/api/*` call requires a JWT issued by
 node add-user.js <username> <password>
 ```
 
-Users live in `data/users.json` (scrypt-hashed, gitignored). The signing secret is
-auto-generated into `config.json` on first run. Run a deployed instance behind
-HTTPS. For local single-user use, set `auth.enabled: false`.
+Users live in the `users` table of `data/jiskra.db` (scrypt-hashed, gitignored), or in
+the `AUTH_USERS` env var for deployments (`add-user.js <user> <pass> --print` emits the
+entry). The signing secret is auto-generated into `config.json` on first run (set
+`AUTH_SECRET` in deployments). Run a deployed instance behind HTTPS. For local
+single-user use, set `auth.enabled: false`.
+
+All settings can also come from environment variables (they override `config.json`) —
+see [DEPLOYMENT.md](DEPLOYMENT.md) for the full table.

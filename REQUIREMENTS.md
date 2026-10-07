@@ -59,17 +59,22 @@ lacks: a per-epic daily status log and a simple risk tracker, kept entirely outs
 
 ### 3.4 Data and integration rules
 - Jira is **read-only**: the tool never writes to Jira.
-- All local data (statuses, risks) lives in `data/db.json`, keyed by epic key, so it
-  survives restarts and is easy to back up or diff.
+- All local data (statuses, risks, risk updates, users) lives in a single SQLite file,
+  `data/jiskra.db` (WAL mode), via the Node built-in `node:sqlite` — one file to back
+  up. Legacy `data/db.json` / `data/users.json` are auto-migrated on first start and
+  renamed to `*.migrated`.
 - If an epic disappears from a gate (label removed), its local data is retained in the
-  file and reappears if the label returns.
+  database and reappears if the label returns.
 
 ## 4. Non-functional requirements
 
-- Runs locally with `node server.js` — Node 18+, **zero npm dependencies**.
+- Runs locally with `node server.js` — Node 22.5+ (built-in `node:sqlite`),
+  **zero npm dependencies**.
 - **Authentication** (for deployed instances; off by default locally via
-  `auth.enabled`): username/password accounts stored in `data/users.json` with
-  scrypt-hashed salted passwords, managed by `node add-user.js <user> <pass>`.
+  `auth.enabled`): username/password accounts stored in the `users` table of
+  `data/jiskra.db` with scrypt-hashed salted passwords, managed by
+  `node add-user.js <user> <pass>`; deployments can instead supply accounts via the
+  `AUTH_USERS` env var (`add-user.js --print` emits an entry).
   `POST /api/login` issues an HS256 JWT (signed with `auth.secret`, auto-generated
   into config.json on first run; TTL `auth.tokenTtlHours`, default 12h). All other
   `/api/*` routes require `Authorization: Bearer <token>`; the UI shows a sign-in
@@ -82,19 +87,26 @@ lacks: a per-epic daily status log and a simple risk tracker, kept entirely outs
 - UI: single page, no build step, responsive down to phone width, respects the OS
   light/dark theme.
 
-## 5. Configuration (v1)
+## 5. Configuration
 
-`config.json` (gitignored):
+Two equivalent sources; **environment variables override `config.json`** key by key,
+so a deployment needs no config file at all (see `DEPLOYMENT.md` for the full table):
 
-| Key | Meaning |
-|---|---|
-| `jira.baseUrl` / `jira.email` / `jira.token` | Atlassian Cloud instance and API token |
-| `jira.targetQuarterField` | custom field id of Target Launch Quarter |
-| `projects` | Jira project keys to scan |
-| `gates` | gate numbers → one tab each |
-| `port` | local HTTP port |
+| config.json | env var | Meaning |
+|---|---|---|
+| `jira.baseUrl` / `jira.email` / `jira.token` | `JIRA_BASE_URL` / `JIRA_EMAIL` / `JIRA_TOKEN` | Atlassian Cloud instance and API token |
+| `jira.targetQuarterField` | `JIRA_TARGET_QUARTER_FIELD` | custom field id of Target Launch Quarter |
+| `jira.ragField` | `JIRA_RAG_FIELD` | custom field id of the RAG / Operating Status select |
+| `projects` | `PROJECTS` (comma-sep) | Jira project keys to scan |
+| `gates` | `GATES` (comma-sep) | gate numbers → one tab each |
+| `gateDescriptions` | `GATE_DESCRIPTIONS` (JSON) | gate time ranges shown in the UI |
+| `port` | `PORT` | local HTTP port |
+| — | `DATA_DIR` | where `jiskra.db` lives (default `./data`) |
+| `auth.*` | `AUTH_ENABLED` / `AUTH_SECRET` / `AUTH_TOKEN_TTL_HOURS` / `AUTH_USERS` | authentication settings |
 
-Changing configuration requires editing the file and restarting the server.
+Changing configuration requires a restart. Deployment target: one instance, persistent
+EBS volume for `DATA_DIR` (not EFS/NFS — SQLite locking), HTTPS in front, secrets from
+AWS Secrets Manager.
 
 ## 6. Planned: generic configuration (next step — not yet implemented)
 
