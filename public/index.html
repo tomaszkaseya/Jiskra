@@ -511,36 +511,37 @@ function bindEvents(){
   });
 }
 
-// --- Executive report: standalone HTML file built from the current gate & filters ---
-function currentList(){
-  const q = $("#quarterFilter").value, rf = $("#riskFilter").value;
-  let list = EPICS;
-  if(q) list = list.filter(e=>e.targetQuarter===q);
-  if(rf==="open-risks") list = list.filter(e=>openRisks(e).length);
-  return list;
+// --- Executive report: one standalone HTML file covering all gates ---
+async function downloadReport(){
+  const btn = $("#report");
+  btn.disabled = true; btn.textContent = "⏳ Report…";
+  try{
+    const sections = [];
+    for(const g of CFG.gates){
+      const d = await api("/api/epics?gate="+encodeURIComponent(g));
+      sections.push({ gate: String(g), list: d.epics });
+    }
+    const html = reportHtml(sections);
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(new Blob([html], {type:"text/html"}));
+    a.download = `jiskra-report-${today()}.html`;
+    a.click();
+    URL.revokeObjectURL(a.href);
+  }finally{
+    btn.disabled = false; btn.textContent = "⬇ Report";
+  }
 }
 
-function downloadReport(){
-  const list = currentList();
-  const html = reportHtml(list);
-  const a = document.createElement("a");
-  a.href = URL.createObjectURL(new Blob([html], {type:"text/html"}));
-  a.download = `jiskra-gate${GATE}-report-${today()}.html`;
-  a.click();
-  URL.revokeObjectURL(a.href);
-}
+const ragColor = r => !r ? "#9aa3ad" : /green/i.test(r) ? "#22a858" : /amber|yellow/i.test(r) ? "#eab308" : /red/i.test(r) ? "#dc2626" : "#9aa3ad";
 
-function reportHtml(list){
-  const gdesc = (CFG.gateDescriptions||{})[GATE] || "";
-  const date = today();
+function gateSectionHtml(gate, list){
+  const gdesc = (CFG.gateDescriptions||{})[gate] || "";
   const agg = list.reduce((a,e)=>({done:a.done+e.progress.done,total:a.total+e.progress.total}),{done:0,total:0});
   const pct = agg.total ? Math.round(100*agg.done/agg.total) : 0;
   const allOpen = list.flatMap(e => openRisks(e).map(r => ({epic:e, risk:r})));
   const sevRank = {High:0, Medium:1, Low:2};
   allOpen.sort((a,b)=>(sevRank[a.risk.severity]??3)-(sevRank[b.risk.severity]??3));
   const sevCount = s => allOpen.filter(x=>x.risk.severity===s).length;
-  const ragColor = r => !r ? "#9aa3ad" : /green/i.test(r) ? "#22a858" : /amber|yellow/i.test(r) ? "#eab308" : /red/i.test(r) ? "#dc2626" : "#9aa3ad";
-  const ragName = r => r || "Not started";
 
   const rows = list.map(e => {
     const p = e.progress.total ? Math.round(100*e.progress.done/e.progress.total) : null;
@@ -569,24 +570,9 @@ function reportHtml(list){
     </tr>`;
   }).join("");
 
-  return `<!doctype html><html lang="en"><head><meta charset="utf-8">
-<title>Gate ${esc(GATE)} Executive Report — ${date}</title>
-<style>
-body{font:14px/1.5 "Segoe UI",system-ui,sans-serif;color:#1b2430;max-width:960px;margin:32px auto;padding:0 20px}
-h1{font-size:22px;margin-bottom:2px} h2{font-size:16px;margin-top:28px;border-bottom:2px solid #dde2e8;padding-bottom:4px}
-.sub{color:#6b7684;margin-bottom:18px}
-.kpis{display:flex;gap:14px;flex-wrap:wrap;margin:18px 0}
-.kpi{border:1px solid #dde2e8;border-radius:10px;padding:12px 18px;min-width:120px}
-.kpi .n{font-size:24px;font-weight:700} .kpi .l{font-size:12px;color:#6b7684}
-table{width:100%;border-collapse:collapse;font-size:13px}
-th,td{border-bottom:1px solid #dde2e8;padding:7px 9px;text-align:left;vertical-align:top}
-th{font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:#6b7684}
-a{color:#2563eb;text-decoration:none}
-.footer{margin-top:28px;color:#6b7684;font-size:12px}
-@media print{body{margin:0}}
-</style></head><body>
-<h1>Gate ${esc(GATE)} — Executive Report</h1>
-<div class="sub">${esc(gdesc)}${gdesc?" · ":""}Generated ${date} · Projects: ${CFG.projects.map(esc).join(", ")}</div>
+  return `<section class="gate">
+<h1>Gate ${esc(gate)}</h1>
+<div class="sub">${esc(gdesc)}</div>
 <div class="kpis">
   <div class="kpi"><div class="n">${list.length}</div><div class="l">Epics</div></div>
   <div class="kpi"><div class="n">${pct}%</div><div class="l">Issues done (${agg.done}/${agg.total})</div></div>
@@ -600,6 +586,35 @@ a{color:#2563eb;text-decoration:none}
 ${allOpen.length ? `<h2>Open risks</h2>
 <table><thead><tr><th>Severity</th><th>Epic</th><th>Risk</th><th>Mitigation plan</th><th>Owner</th><th>Latest update</th></tr></thead>
 <tbody>${riskRows}</tbody></table>` : "<h2>Open risks</h2><p>No open risks. 🎉</p>"}
+</section>`;
+}
+
+function reportHtml(sections){
+  const date = today();
+  return `<!doctype html><html lang="en"><head><meta charset="utf-8">
+<title>Delivery Report — ${date}</title>
+<style>
+body{font:14px/1.5 "Segoe UI",system-ui,sans-serif;color:#1b2430;max-width:960px;margin:32px auto;padding:0 20px}
+h1{font-size:20px;margin:0 0 2px} h2{font-size:15px;margin-top:22px;border-bottom:2px solid #dde2e8;padding-bottom:4px}
+.head h1{font-size:24px}
+.sub{color:#6b7684;margin-bottom:14px}
+.kpis{display:flex;gap:14px;flex-wrap:wrap;margin:14px 0}
+.kpi{border:1px solid #dde2e8;border-radius:10px;padding:12px 18px;min-width:120px}
+.kpi .n{font-size:24px;font-weight:700} .kpi .l{font-size:12px;color:#6b7684}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th,td{border-bottom:1px solid #dde2e8;padding:7px 9px;text-align:left;vertical-align:top}
+th{font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:#6b7684}
+a{color:#2563eb;text-decoration:none}
+section.gate{margin-top:36px;padding-top:18px;border-top:4px solid #2563eb}
+section.gate:first-of-type{margin-top:8px}
+.footer{margin-top:28px;color:#6b7684;font-size:12px}
+@media print{body{margin:0} section.gate{break-before:page} section.gate:first-of-type{break-before:auto}}
+</style></head><body>
+<div class="head">
+  <h1>Delivery Report — Gates ${sections.map(s=>esc(s.gate)).join(", ")}</h1>
+  <div class="sub">Generated ${date} · Projects: ${CFG.projects.map(esc).join(", ")}</div>
+</div>
+${sections.map(s => gateSectionHtml(s.gate, s.list)).join("")}
 <div class="footer">Generated by Jiskra · data from ${esc(CFG.jiraBase)} + local risk register</div>
 </body></html>`;
 }

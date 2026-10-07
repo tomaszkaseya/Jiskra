@@ -58,13 +58,14 @@ lacks: a per-epic daily status log and a simple risk tracker, kept entirely outs
 - Deliberately simple — no workflow, no sync to Jira.
 
 ### 3.4 Executive report
-- The "Report" button downloads a standalone, self-contained HTML file for the current
-  gate (respecting the active quarter/risk filters) — shareable by email or printable
-  to PDF, no Jiskra access needed by the reader.
-- Contents: KPI tiles (epic count, % of child issues done, open risks by severity), an
-  epic table (RAG dot, quarter, Jira status, progress, open-risk count, latest daily
-  status note) and an open-risk register (severity-sorted, with mitigation, owner and
-  the latest risk update). Links point back to Jira.
+- The "Report" button downloads one standalone, self-contained HTML file covering
+  **all configured gates** (fetched fresh from Jira on click) — shareable by email or
+  printable to PDF, no Jiskra access needed by the reader.
+- One section per gate (each starts on a new page when printed), containing: KPI tiles
+  (epic count, % of child issues done, open risks by severity), an epic table (RAG dot,
+  quarter, Jira status, progress, open-risk count, latest daily status note) and an
+  open-risk register (severity-sorted, with mitigation, owner and the latest risk
+  update). Links point back to Jira.
 
 ### 3.5 Data and integration rules
 - Jira is **read-only**: the tool never writes to Jira.
