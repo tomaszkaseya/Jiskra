@@ -27,11 +27,27 @@ Open http://localhost:4777 (Node 18+, no dependencies).
 
 ```json
 {
-  "jira": { "baseUrl": "...", "email": "...", "token": "...", "targetQuarterField": "customfield_14106" },
+  "jira": { "baseUrl": "...", "email": "...", "token": "...",
+            "targetQuarterField": "customfield_14106", "ragField": "customfield_14707" },
   "projects": ["ONP", "OA"],
   "gates": [3, 4, 5],
-  "port": 4777
+  "gateDescriptions": { "3": "Project start → Sep 2026" },
+  "port": 4777,
+  "auth": { "enabled": true, "tokenTtlHours": 12 }
 }
 ```
 
 Add a project or gate by editing this file and restarting.
+
+## Authentication (for deployments)
+
+With `auth.enabled: true`, every `/api/*` call requires a JWT issued by
+`POST /api/login`; the UI shows a sign-in screen. Manage accounts with:
+
+```
+node add-user.js <username> <password>
+```
+
+Users live in `data/users.json` (scrypt-hashed, gitignored). The signing secret is
+auto-generated into `config.json` on first run. Run a deployed instance behind
+HTTPS. For local single-user use, set `auth.enabled: false`.

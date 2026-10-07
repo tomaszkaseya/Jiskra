@@ -3,6 +3,7 @@
 const http = require("http");
 const fs = require("fs");
 const path = require("path");
+const crypto = require("crypto");
 
 const CONFIG = JSON.parse(fs.readFileSync(path.join(__dirname, "config.json"), "utf8"));
 const DATA_DIR = path.join(__dirname, "data");
@@ -25,6 +26,50 @@ function saveDb(db) {
 function epicRecord(db, key) {
   if (!db.epics[key]) db.epics[key] = { statuses: [], risks: [] };
   return db.epics[key];
+}
+
+// --- Authentication (JWT, HS256, users in data/users.json) ---
+const AUTH = CONFIG.auth || { enabled: false };
+const USERS_FILE = path.join(DATA_DIR, "users.json");
+if (AUTH.enabled && !AUTH.secret) {
+  // Persist a generated secret so tokens survive restarts.
+  AUTH.secret = crypto.randomBytes(32).toString("hex");
+  CONFIG.auth = AUTH;
+  fs.writeFileSync(path.join(__dirname, "config.json"), JSON.stringify(CONFIG, null, 2));
+  console.log("Generated auth secret and saved it to config.json");
+}
+
+function loadUsers() {
+  if (!fs.existsSync(USERS_FILE)) return [];
+  return JSON.parse(fs.readFileSync(USERS_FILE, "utf8"));
+}
+
+const b64url = (buf) => Buffer.from(buf).toString("base64url");
+
+function signToken(payload) {
+  const header = b64url(JSON.stringify({ alg: "HS256", typ: "JWT" }));
+  const body = b64url(JSON.stringify(payload));
+  const sig = crypto.createHmac("sha256", AUTH.secret).update(header + "." + body).digest("base64url");
+  return `${header}.${body}.${sig}`;
+}
+
+function verifyToken(token) {
+  const parts = (token || "").split(".");
+  if (parts.length !== 3) return null;
+  const expected = crypto.createHmac("sha256", AUTH.secret).update(parts[0] + "." + parts[1]).digest("base64url");
+  const a = Buffer.from(parts[2]), b = Buffer.from(expected);
+  if (a.length !== b.length || !crypto.timingSafeEqual(a, b)) return null;
+  try {
+    const payload = JSON.parse(Buffer.from(parts[1], "base64url").toString("utf8"));
+    if (!payload.exp || payload.exp < Date.now() / 1000) return null;
+    return payload;
+  } catch { return null; }
+}
+
+function checkPassword(user, password) {
+  const hash = crypto.scryptSync(password, Buffer.from(user.salt, "hex"), 64);
+  const stored = Buffer.from(user.hash, "hex");
+  return hash.length === stored.length && crypto.timingSafeEqual(hash, stored);
 }
 
 const authHeader = "Basic " + Buffer.from(CONFIG.jira.email + ":" + CONFIG.jira.token).toString("base64");
@@ -109,6 +154,25 @@ const MIME = { ".html": "text/html", ".js": "text/javascript", ".css": "text/css
 const server = http.createServer(async (req, res) => {
   const url = new URL(req.url, "http://localhost");
   try {
+    // --- login (public) ---
+    if (url.pathname === "/api/login" && req.method === "POST") {
+      if (!AUTH.enabled) return sendJson(res, 200, { token: null, authDisabled: true });
+      const { username, password } = await readBody(req);
+      const user = loadUsers().find((u) => u.username === username);
+      if (!user || !password || !checkPassword(user, password)) {
+        return sendJson(res, 401, { error: "invalid username or password" });
+      }
+      const ttl = (AUTH.tokenTtlHours || 12) * 3600;
+      const token = signToken({ sub: user.username, exp: Math.floor(Date.now() / 1000) + ttl });
+      return sendJson(res, 200, { token, username: user.username });
+    }
+
+    // --- auth gate for everything else under /api/ ---
+    if (AUTH.enabled && url.pathname.startsWith("/api/")) {
+      const m = (req.headers.authorization || "").match(/^Bearer (.+)$/);
+      if (!m || !verifyToken(m[1])) return sendJson(res, 401, { error: "unauthorized" });
+    }
+
     // --- API ---
     if (url.pathname === "/api/config" && req.method === "GET") {
       return sendJson(res, 200, { gates: CONFIG.gates, gateDescriptions: CONFIG.gateDescriptions || {}, projects: CONFIG.projects, jiraBase: CONFIG.jira.baseUrl });

@@ -99,6 +99,10 @@ table.matrix{width:100%;border-collapse:collapse;background:var(--card);border:1
 .pbar .fill{display:block;height:100%;background:var(--green)}
 .pbar .num{font-size:12px;color:var(--muted);white-space:nowrap;font-variant-numeric:tabular-nums}
 .matrix tfoot td{font-weight:600;background:var(--gray-soft)}
+#login{position:fixed;inset:0;background:var(--bg);display:none;align-items:center;justify-content:center;z-index:20}
+#login form{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:28px;display:grid;gap:10px;width:300px}
+#login h2{margin:0 0 6px;font-size:18px}
+#login .error-msg{color:var(--red);font-size:13px;min-height:18px}
 </style>
 </head>
 <body>
@@ -122,6 +126,15 @@ table.matrix{width:100%;border-collapse:collapse;background:var(--card);border:1
   <div class="summary" id="summary"></div>
   <div id="content" class="loading">Loading…</div>
 </main>
+<div id="login">
+  <form id="loginForm">
+    <h2>Jiskra <span style="color:var(--accent)">✦</span></h2>
+    <input name="username" placeholder="Username" autocomplete="username" required>
+    <input name="password" type="password" placeholder="Password" autocomplete="current-password" required>
+    <div class="error-msg" id="loginError"></div>
+    <button class="primary">Sign in</button>
+  </form>
+</div>
 
 <script>
 let CFG = null, GATE = null, EPICS = [], OPEN = new Set();
@@ -132,11 +145,38 @@ const $ = s => document.querySelector(s);
 const esc = s => (s ?? "").toString().replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const today = () => new Date().toISOString().slice(0,10);
 
-async function api(path, opts){
+async function api(path, opts = {}){
+  const token = localStorage.getItem("token");
+  if(token){
+    opts.headers = Object.assign({}, opts.headers, { Authorization: "Bearer " + token });
+  }
   const r = await fetch(path, opts);
+  if(r.status === 401 && path !== "/api/login"){
+    localStorage.removeItem("token");
+    showLogin();
+    throw new Error("unauthorized");
+  }
   const j = await r.json().catch(()=>({}));
   if(!r.ok) throw new Error(j.error || r.status);
   return j;
+}
+
+function showLogin(){
+  $("#login").style.display = "flex";
+  $("#loginForm").onsubmit = async ev => {
+    ev.preventDefault();
+    const fd = new FormData(ev.target);
+    try{
+      const d = await api("/api/login",{method:"POST",headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({username:fd.get("username"),password:fd.get("password")})});
+      if(d.token) localStorage.setItem("token", d.token);
+      $("#login").style.display = "none";
+      $("#loginError").textContent = "";
+      await init();
+    }catch(e){
+      $("#loginError").textContent = "Invalid username or password";
+    }
+  };
 }
 
 async function init(){
@@ -478,7 +518,7 @@ async function reloadLocal(key){
   render();
 }
 
-init();
+init().catch(e => { if(e.message !== "unauthorized") throw e; });
 </script>
 </body>
 </html>

@@ -67,8 +67,16 @@ lacks: a per-epic daily status log and a simple risk tracker, kept entirely outs
 ## 4. Non-functional requirements
 
 - Runs locally with `node server.js` — Node 18+, **zero npm dependencies**.
-- Single-user / trusted-network tool; no authentication of its own. The Jira API token
-  grants the access; it must never be committed (hence `config.json` is gitignored).
+- **Authentication** (for deployed instances; off by default locally via
+  `auth.enabled`): username/password accounts stored in `data/users.json` with
+  scrypt-hashed salted passwords, managed by `node add-user.js <user> <pass>`.
+  `POST /api/login` issues an HS256 JWT (signed with `auth.secret`, auto-generated
+  into config.json on first run; TTL `auth.tokenTtlHours`, default 12h). All other
+  `/api/*` routes require `Authorization: Bearer <token>`; the UI shows a sign-in
+  screen on 401 and keeps the token in localStorage. A deployed instance must run
+  behind HTTPS (reverse proxy) — the token is a bearer credential.
+- The Jira API token grants the Jira access; it must never be committed (hence
+  `config.json` is gitignored, as is `data/` with the user database).
 - Works against Atlassian Cloud REST API v3 (`/rest/api/3/search/jql`) with basic auth
   (email + API token).
 - UI: single page, no build step, responsive down to phone width, respects the OS
