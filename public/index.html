@@ -119,6 +119,7 @@ table.matrix{width:100%;border-collapse:collapse;background:var(--card);border:1
       <option value="">All epics</option>
       <option value="open-risks">With open risks</option>
     </select>
+    <button class="ghost" id="report">⬇ Report</button>
     <button class="ghost" id="refresh">↻ Refresh</button>
   </div>
 </header>
@@ -186,6 +187,7 @@ async function init(){
   renderTabs();
   renderViewToggle();
   $("#refresh").onclick = load;
+  $("#report").onclick = downloadReport;
   $("#quarterFilter").onchange = render;
   $("#riskFilter").onchange = render;
   await load();
@@ -507,6 +509,99 @@ function bindEvents(){
       body:JSON.stringify({status: risk.status==="open" ? "closed" : "open"})});
     await reloadLocal(key);
   });
+}
+
+// --- Executive report: standalone HTML file built from the current gate & filters ---
+function currentList(){
+  const q = $("#quarterFilter").value, rf = $("#riskFilter").value;
+  let list = EPICS;
+  if(q) list = list.filter(e=>e.targetQuarter===q);
+  if(rf==="open-risks") list = list.filter(e=>openRisks(e).length);
+  return list;
+}
+
+function downloadReport(){
+  const list = currentList();
+  const html = reportHtml(list);
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob([html], {type:"text/html"}));
+  a.download = `jiskra-gate${GATE}-report-${today()}.html`;
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+
+function reportHtml(list){
+  const gdesc = (CFG.gateDescriptions||{})[GATE] || "";
+  const date = today();
+  const agg = list.reduce((a,e)=>({done:a.done+e.progress.done,total:a.total+e.progress.total}),{done:0,total:0});
+  const pct = agg.total ? Math.round(100*agg.done/agg.total) : 0;
+  const allOpen = list.flatMap(e => openRisks(e).map(r => ({epic:e, risk:r})));
+  const sevRank = {High:0, Medium:1, Low:2};
+  allOpen.sort((a,b)=>(sevRank[a.risk.severity]??3)-(sevRank[b.risk.severity]??3));
+  const sevCount = s => allOpen.filter(x=>x.risk.severity===s).length;
+  const ragColor = r => !r ? "#9aa3ad" : /green/i.test(r) ? "#22a858" : /amber|yellow/i.test(r) ? "#eab308" : /red/i.test(r) ? "#dc2626" : "#9aa3ad";
+  const ragName = r => r || "Not started";
+
+  const rows = list.map(e => {
+    const p = e.progress.total ? Math.round(100*e.progress.done/e.progress.total) : null;
+    const last = e.statuses[0];
+    return `<tr>
+      <td><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${ragColor(e.rag)};margin-right:6px"></span>
+          <a href="${esc(e.url)}">${e.key}</a> ${esc(e.summary)}</td>
+      <td>${esc(e.targetQuarter||"—")}</td>
+      <td>${esc(e.status)}</td>
+      <td style="text-align:right">${p===null?"—":p+"% ("+e.progress.done+"/"+e.progress.total+")"}</td>
+      <td style="text-align:center">${openRisks(e).length||"—"}</td>
+      <td>${last?esc(last.date)+": "+esc(last.text):"—"}</td>
+    </tr>`;
+  }).join("");
+
+  const riskRows = allOpen.map(({epic,risk}) => {
+    const lastUpd = (risk.updates||[])[0];
+    const sevColor = risk.severity==="High"?"#dc2626":risk.severity==="Medium"?"#b45309":"#15803d";
+    return `<tr>
+      <td style="color:${sevColor};font-weight:700">${esc(risk.severity)}</td>
+      <td><a href="${esc(epic.url)}">${epic.key}</a></td>
+      <td><strong>${esc(risk.title)}</strong>${risk.description?"<br>"+esc(risk.description):""}</td>
+      <td>${esc(risk.mitigation||"—")}</td>
+      <td>${esc(risk.owner||"—")}</td>
+      <td>${lastUpd?esc(lastUpd.date)+": "+esc(lastUpd.text):"—"}</td>
+    </tr>`;
+  }).join("");
+
+  return `<!doctype html><html lang="en"><head><meta charset="utf-8">
+<title>Gate ${esc(GATE)} Executive Report — ${date}</title>
+<style>
+body{font:14px/1.5 "Segoe UI",system-ui,sans-serif;color:#1b2430;max-width:960px;margin:32px auto;padding:0 20px}
+h1{font-size:22px;margin-bottom:2px} h2{font-size:16px;margin-top:28px;border-bottom:2px solid #dde2e8;padding-bottom:4px}
+.sub{color:#6b7684;margin-bottom:18px}
+.kpis{display:flex;gap:14px;flex-wrap:wrap;margin:18px 0}
+.kpi{border:1px solid #dde2e8;border-radius:10px;padding:12px 18px;min-width:120px}
+.kpi .n{font-size:24px;font-weight:700} .kpi .l{font-size:12px;color:#6b7684}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th,td{border-bottom:1px solid #dde2e8;padding:7px 9px;text-align:left;vertical-align:top}
+th{font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:#6b7684}
+a{color:#2563eb;text-decoration:none}
+.footer{margin-top:28px;color:#6b7684;font-size:12px}
+@media print{body{margin:0}}
+</style></head><body>
+<h1>Gate ${esc(GATE)} — Executive Report</h1>
+<div class="sub">${esc(gdesc)}${gdesc?" · ":""}Generated ${date} · Projects: ${CFG.projects.map(esc).join(", ")}</div>
+<div class="kpis">
+  <div class="kpi"><div class="n">${list.length}</div><div class="l">Epics</div></div>
+  <div class="kpi"><div class="n">${pct}%</div><div class="l">Issues done (${agg.done}/${agg.total})</div></div>
+  <div class="kpi"><div class="n" style="color:#dc2626">${sevCount("High")}</div><div class="l">High risks open</div></div>
+  <div class="kpi"><div class="n" style="color:#b45309">${sevCount("Medium")}</div><div class="l">Medium risks open</div></div>
+  <div class="kpi"><div class="n" style="color:#15803d">${sevCount("Low")}</div><div class="l">Low risks open</div></div>
+</div>
+<h2>Epics</h2>
+<table><thead><tr><th>Epic (RAG)</th><th>Quarter</th><th>Jira status</th><th>Progress</th><th>Open risks</th><th>Latest status note</th></tr></thead>
+<tbody>${rows}</tbody></table>
+${allOpen.length ? `<h2>Open risks</h2>
+<table><thead><tr><th>Severity</th><th>Epic</th><th>Risk</th><th>Mitigation plan</th><th>Owner</th><th>Latest update</th></tr></thead>
+<tbody>${riskRows}</tbody></table>` : "<h2>Open risks</h2><p>No open risks. 🎉</p>"}
+<div class="footer">Generated by Jiskra · data from ${esc(CFG.jiraBase)} + local risk register</div>
+</body></html>`;
 }
 
 // Refresh one epic's local data without re-hitting Jira for the whole gate.

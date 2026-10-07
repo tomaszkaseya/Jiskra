@@ -57,7 +57,16 @@ lacks: a per-epic daily status log and a simple risk tracker, kept entirely outs
   progress reported at the daily), listed newest-first, editable and deletable.
 - Deliberately simple — no workflow, no sync to Jira.
 
-### 3.4 Data and integration rules
+### 3.4 Executive report
+- The "Report" button downloads a standalone, self-contained HTML file for the current
+  gate (respecting the active quarter/risk filters) — shareable by email or printable
+  to PDF, no Jiskra access needed by the reader.
+- Contents: KPI tiles (epic count, % of child issues done, open risks by severity), an
+  epic table (RAG dot, quarter, Jira status, progress, open-risk count, latest daily
+  status note) and an open-risk register (severity-sorted, with mitigation, owner and
+  the latest risk update). Links point back to Jira.
+
+### 3.5 Data and integration rules
 - Jira is **read-only**: the tool never writes to Jira.
 - All local data (statuses, risks, risk updates, users) lives in a single SQLite file,
   `data/jiskra.db` (WAL mode), via the Node built-in `node:sqlite` — one file to back
