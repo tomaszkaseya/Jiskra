@@ -57,7 +57,14 @@ lacks: a per-epic daily status log and a simple risk tracker, kept entirely outs
   progress reported at the daily), listed newest-first, editable and deletable.
 - Deliberately simple — no workflow, no sync to Jira.
 
-### 3.4 Executive report
+### 3.4 User management
+- A "Users" page (modal) lists accounts and lets any signed-in user add a user, reset a
+  password (same form) or delete a user. No roles — it is a 2–3 person tool.
+- Guards: cannot delete your own account or the last remaining user; passwords min 8
+  characters. When accounts come from the `AUTH_USERS` env var, the page is read-only
+  (the API refuses changes with an explanatory error).
+
+### 3.5 Executive report
 - The "Report" button downloads one standalone, self-contained HTML file covering
   **all configured gates** (fetched fresh from Jira on click) — shareable by email or
   printable to PDF, no Jiskra access needed by the reader.
@@ -67,7 +74,7 @@ lacks: a per-epic daily status log and a simple risk tracker, kept entirely outs
   open-risk register (severity-sorted, with mitigation, owner and the latest risk
   update). Links point back to Jira.
 
-### 3.5 Data and integration rules
+### 3.6 Data and integration rules
 - Jira is **read-only**: the tool never writes to Jira.
 - All local data (statuses, risks, risk updates, users) lives in a single SQLite file,
   `data/jiskra.db` (WAL mode), via the Node built-in `node:sqlite` — one file to back

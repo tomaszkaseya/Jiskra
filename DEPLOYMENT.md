@@ -63,9 +63,9 @@ local data (risk history, daily statuses, user accounts), not empty.
 4. Start the app. Done — users log in with the same credentials they use locally.
 
 With users seeded this way, `AUTH_USERS` is unnecessary — leave it unset and accounts
-are managed in the database (`node add-user.js <user> <pass>` run next to the app;
-same command updates an existing user's password). `AUTH_USERS` remains available as
-an alternative when shell access to the instance is not practical.
+are managed from the app's own **Users** page (any signed-in user can add/reset/delete;
+`node add-user.js` works too). `AUTH_USERS` remains available as an alternative when
+the team must not manage accounts in-app; it makes the Users page read-only.
 
 The same `snapshot.js` is also the backup tool — schedule it (or copy its output) to
 S3.

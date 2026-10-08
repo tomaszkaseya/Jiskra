@@ -99,6 +99,14 @@ table.matrix{width:100%;border-collapse:collapse;background:var(--card);border:1
 .pbar .fill{display:block;height:100%;background:var(--green)}
 .pbar .num{font-size:12px;color:var(--muted);white-space:nowrap;font-variant-numeric:tabular-nums}
 .matrix tfoot td{font-weight:600;background:var(--gray-soft)}
+#users{position:fixed;inset:0;background:rgba(0,0,0,.45);display:none;align-items:center;justify-content:center;z-index:15}
+#users .panel{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:22px;width:360px;max-height:80vh;overflow:auto}
+#users h2{margin:0 0 12px;font-size:16px}
+#users .urow{display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--border)}
+#users .urow span{flex:1;font-weight:600}
+#users form{display:grid;gap:8px;margin-top:14px}
+#users .msg{font-size:13px;min-height:18px}
+#users .msg.err{color:var(--red)} #users .msg.ok{color:var(--green)}
 #login{position:fixed;inset:0;background:var(--bg);display:none;align-items:center;justify-content:center;z-index:20}
 #login form{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:28px;display:grid;gap:10px;width:300px}
 #login h2{margin:0 0 6px;font-size:18px}
@@ -119,6 +127,7 @@ table.matrix{width:100%;border-collapse:collapse;background:var(--card);border:1
       <option value="">All epics</option>
       <option value="open-risks">With open risks</option>
     </select>
+    <button class="ghost" id="usersBtn">👤 Users</button>
     <button class="ghost" id="report">⬇ Report</button>
     <button class="ghost" id="refresh">↻ Refresh</button>
   </div>
@@ -127,6 +136,21 @@ table.matrix{width:100%;border-collapse:collapse;background:var(--card);border:1
   <div class="summary" id="summary"></div>
   <div id="content" class="loading">Loading…</div>
 </main>
+<div id="users">
+  <div class="panel">
+    <h2>Users</h2>
+    <div id="usersList"></div>
+    <form id="userForm">
+      <input name="username" placeholder="Username" autocomplete="off" required>
+      <input name="password" type="password" placeholder="Password (min 8 chars; sets or resets)" minlength="8" required>
+      <div class="msg" id="userMsg"></div>
+      <div style="display:flex;gap:8px">
+        <button class="primary">Save user</button>
+        <button type="button" class="ghost" id="usersClose">Close</button>
+      </div>
+    </form>
+  </div>
+</div>
 <div id="login">
   <form id="loginForm">
     <h2>Jiskra <span style="color:var(--accent)">✦</span></h2>
@@ -162,6 +186,52 @@ async function api(path, opts = {}){
   return j;
 }
 
+// --- user management ---
+async function openUsers(){
+  $("#users").style.display = "flex";
+  $("#userMsg").textContent = "";
+  await refreshUsers();
+}
+
+async function refreshUsers(){
+  const el = $("#usersList");
+  try{
+    const d = await api("/api/users");
+    el.innerHTML = d.users.map(u => `
+      <div class="urow"><span>${esc(u)}</span>
+        <button class="ghost" data-del-user="${esc(u)}">✕</button></div>`).join("") ||
+      '<div class="empty">No users yet.</div>';
+    el.querySelectorAll("[data-del-user]").forEach(b => b.onclick = async () => {
+      if(!confirm(`Delete user '${b.dataset.delUser}'?`)) return;
+      try{
+        await api("/api/users/"+encodeURIComponent(b.dataset.delUser), {method:"DELETE"});
+        setUserMsg("User deleted.", true);
+        await refreshUsers();
+      }catch(e){ setUserMsg(e.message, false); }
+    });
+  }catch(e){
+    el.innerHTML = `<div class="empty">${esc(e.message)}</div>`;
+  }
+}
+
+function setUserMsg(text, ok){
+  const m = $("#userMsg");
+  m.textContent = text;
+  m.className = "msg " + (ok ? "ok" : "err");
+}
+
+async function saveUser(ev){
+  ev.preventDefault();
+  const fd = new FormData(ev.target);
+  try{
+    const d = await api("/api/users", {method:"POST", headers:{"Content-Type":"application/json"},
+      body: JSON.stringify({username: fd.get("username"), password: fd.get("password")})});
+    setUserMsg(d.updated ? `Password updated for '${d.username}'.` : `User '${d.username}' created.`, true);
+    ev.target.reset();
+    await refreshUsers();
+  }catch(e){ setUserMsg(e.message, false); }
+}
+
 function showLogin(){
   $("#login").style.display = "flex";
   $("#loginForm").onsubmit = async ev => {
@@ -188,6 +258,10 @@ async function init(){
   renderViewToggle();
   $("#refresh").onclick = load;
   $("#report").onclick = downloadReport;
+  $("#usersBtn").onclick = openUsers;
+  $("#usersClose").onclick = () => $("#users").style.display = "none";
+  $("#users").onclick = ev => { if(ev.target.id === "users") $("#users").style.display = "none"; };
+  $("#userForm").onsubmit = saveUser;
   $("#quarterFilter").onchange = render;
   $("#riskFilter").onchange = render;
   await load();

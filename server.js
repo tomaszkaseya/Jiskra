@@ -283,6 +283,40 @@ const server = http.createServer(async (req, res) => {
       if (!m || !verifyToken(m[1])) return sendJson(res, 401, { error: "unauthorized" });
     }
 
+    // --- user management (any authenticated user; 2-3 person tool, no roles) ---
+    const um = url.pathname.match(/^\/api\/users(?:\/([^/]+))?$/);
+    if (um) {
+      if (AUTH.users) return sendJson(res, 409, { error: "users are managed via the AUTH_USERS environment variable" });
+      const uname = um[1] ? decodeURIComponent(um[1]) : null;
+      if (req.method === "GET" && !uname) {
+        return sendJson(res, 200, { users: db.prepare("SELECT username FROM users ORDER BY username").all().map((u) => u.username) });
+      }
+      if (req.method === "POST" && !uname) {
+        const { username, password } = await readBody(req);
+        if (!username || !/^[\w.@-]{2,64}$/.test(username)) return sendJson(res, 400, { error: "invalid username" });
+        if (!password || password.length < 8) return sendJson(res, 400, { error: "password must be at least 8 characters" });
+        const salt = crypto.randomBytes(16).toString("hex");
+        const hash = crypto.scryptSync(password, Buffer.from(salt, "hex"), 64).toString("hex");
+        const existed = !!db.prepare("SELECT 1 FROM users WHERE username = ?").get(username);
+        db.prepare("INSERT INTO users (username,salt,hash) VALUES (?,?,?) ON CONFLICT(username) DO UPDATE SET salt=excluded.salt, hash=excluded.hash")
+          .run(username, salt, hash);
+        return sendJson(res, existed ? 200 : 201, { username, updated: existed });
+      }
+      if (req.method === "DELETE" && uname) {
+        const count = db.prepare("SELECT COUNT(*) AS n FROM users").get().n;
+        if (AUTH.enabled && count <= 1) return sendJson(res, 400, { error: "cannot delete the last user" });
+        if (AUTH.enabled) {
+          const token = (req.headers.authorization || "").match(/^Bearer (.+)$/);
+          const me = token && verifyToken(token[1]);
+          if (me && me.sub === uname) return sendJson(res, 400, { error: "cannot delete your own account" });
+        }
+        const r = db.prepare("DELETE FROM users WHERE username = ?").run(uname);
+        if (!r.changes) return sendJson(res, 404, { error: "not found" });
+        return sendJson(res, 200, { ok: true });
+      }
+      return sendJson(res, 405, { error: "method not allowed" });
+    }
+
     // --- API ---
     if (url.pathname === "/api/config" && req.method === "GET") {
       return sendJson(res, 200, { gates: CONFIG.gates, gateDescriptions: CONFIG.gateDescriptions, projects: CONFIG.projects, jiraBase: CONFIG.jira.baseUrl });
