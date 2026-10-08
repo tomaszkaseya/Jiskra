@@ -27,19 +27,14 @@ development fallback and is not needed in a deployment.
 | `AUTH_ENABLED` | yes | no | `true` in any deployment |
 | `AUTH_SECRET` | yes | **yes** | 32+ random bytes hex (e.g. `openssl rand -hex 32`) → Secrets Manager. Must be stable across restarts or logins drop. |
 | `AUTH_TOKEN_TTL_HOURS` | no | no | default `12` |
-| `AUTH_USERS` | yes* | **yes** | comma-separated `username:salt:hash` entries → Secrets Manager |
+| `AUTH_USERS` | no | **yes** | optional override: comma-separated `username:salt:hash` entries → Secrets Manager |
 
-\* If `AUTH_USERS` is unset, users are read from the `users` table in the SQLite
-database instead (managed on the host with `node add-user.js <user> <pass>`).
-
-### User entries for AUTH_USERS
-
-The app owner generates each entry locally (the password itself is never stored):
-
-```
-node add-user.js <username> <password> --print
-# -> username:salt:hash        (paste into AUTH_USERS, comma-separated)
-```
+User accounts normally live in the `users` table of the SQLite database (seeded from
+the owner's local data — see below — and managed with `node add-user.js <user> <pass>`
+run next to the app). Set `AUTH_USERS` only when shell access to the instance is not
+practical; the owner generates each entry locally with
+`node add-user.js <username> <password> --print` (the password itself is never stored)
+and when it is set, the database's `users` table is ignored.
 
 ## Storage
 
@@ -86,15 +81,8 @@ S3.
 - Health check: `GET /` returns the UI (200) without authentication; everything under
   `/api/` except `/api/login` requires a valid JWT.
 
-## Minimal Dockerfile
+## Dockerfile
 
-```dockerfile
-FROM node:24-alpine
-WORKDIR /app
-COPY server.js add-user.js ./
-COPY public ./public
-ENV DATA_DIR=/data
-VOLUME /data
-EXPOSE 4777
-CMD ["node", "server.js"]
-```
+A ready-to-use `Dockerfile` is in the repository root (node:24-alpine, copies
+`server.js`, `add-user.js`, `snapshot.js` and `public/`, data volume at `/data`,
+listens on 4777).
