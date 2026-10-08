@@ -57,9 +57,13 @@ lacks: a per-epic daily status log and a simple risk tracker, kept entirely outs
   progress reported at the daily), listed newest-first, editable and deletable.
 - Deliberately simple — no workflow, no sync to Jira.
 
-### 3.4 User management
-- A "Users" page (modal) lists accounts and lets any signed-in user add a user, reset a
-  password (same form) or delete a user. No roles — it is a 2–3 person tool.
+### 3.4 Settings & user management
+- A gear icon in the header opens a **Settings page** (hash-routed, `#settings`) with a
+  sidebar of sections — Users today; Jira connection and Gates & projects are planned
+  there (section 6).
+- The Users section lists accounts in a table with per-row "Reset password" (inline
+  form) and "Delete", plus an add-user form. Any signed-in user can manage accounts —
+  no roles, it is a 2–3 person tool.
 - Guards: cannot delete your own account or the last remaining user; passwords min 8
   characters. When accounts come from the `AUTH_USERS` env var, the page is read-only
   (the API refuses changes with an explanatory error).

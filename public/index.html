@@ -99,14 +99,29 @@ table.matrix{width:100%;border-collapse:collapse;background:var(--card);border:1
 .pbar .fill{display:block;height:100%;background:var(--green)}
 .pbar .num{font-size:12px;color:var(--muted);white-space:nowrap;font-variant-numeric:tabular-nums}
 .matrix tfoot td{font-weight:600;background:var(--gray-soft)}
-#users{position:fixed;inset:0;background:rgba(0,0,0,.45);display:none;align-items:center;justify-content:center;z-index:15}
-#users .panel{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:22px;width:360px;max-height:80vh;overflow:auto}
-#users h2{margin:0 0 12px;font-size:16px}
-#users .urow{display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--border)}
-#users .urow span{flex:1;font-weight:600}
-#users form{display:grid;gap:8px;margin-top:14px}
-#users .msg{font-size:13px;min-height:18px}
-#users .msg.err{color:var(--red)} #users .msg.ok{color:var(--green)}
+body[data-page=settings] .tabs, body[data-page=settings] .toolbar > :not(#settingsBtn){display:none}
+#settingsBtn.active{background:var(--accent);border-color:var(--accent);color:#fff}
+.settings{display:grid;grid-template-columns:200px 1fr;gap:24px;align-items:start}
+@media (max-width:700px){.settings{grid-template-columns:1fr}}
+.snav{background:var(--card);border:1px solid var(--border);border-radius:10px;overflow:hidden}
+.snav button{display:block;width:100%;text-align:left;padding:11px 16px;border:none;background:none;color:var(--text);cursor:pointer;font:inherit;border-bottom:1px solid var(--border)}
+.snav button:last-child{border-bottom:none}
+.snav button.active{background:var(--accent);color:#fff;font-weight:600}
+.snav button:disabled{color:var(--muted);cursor:default;font-style:italic}
+.spanel{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:20px 22px}
+.spanel h2{margin:0 0 4px;font-size:17px}
+.spanel .hint{color:var(--muted);font-size:13px;margin:0 0 16px}
+table.users{width:100%;border-collapse:collapse;margin-bottom:18px}
+.users th,.users td{border-bottom:1px solid var(--border);padding:8px 10px;text-align:left}
+.users th{font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:var(--muted)}
+.users td.actions{text-align:right;white-space:nowrap}
+.users td.actions button{margin-left:6px}
+form.adduser{display:grid;grid-template-columns:1fr 1fr auto;gap:8px;align-items:start}
+@media (max-width:700px){form.adduser{grid-template-columns:1fr}}
+.msg{font-size:13px;min-height:18px;margin-top:8px}
+.msg.err{color:var(--red)} .msg.ok{color:var(--green)}
+.inlinepw{display:flex;gap:6px;margin-top:6px}
+.inlinepw input{flex:1}
 #login{position:fixed;inset:0;background:var(--bg);display:none;align-items:center;justify-content:center;z-index:20}
 #login form{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:28px;display:grid;gap:10px;width:300px}
 #login h2{margin:0 0 6px;font-size:18px}
@@ -127,30 +142,15 @@ table.matrix{width:100%;border-collapse:collapse;background:var(--card);border:1
       <option value="">All epics</option>
       <option value="open-risks">With open risks</option>
     </select>
-    <button class="ghost" id="usersBtn">👤 Users</button>
     <button class="ghost" id="report">⬇ Report</button>
     <button class="ghost" id="refresh">↻ Refresh</button>
+    <button class="ghost" id="settingsBtn" title="Settings">⚙</button>
   </div>
 </header>
 <main>
   <div class="summary" id="summary"></div>
   <div id="content" class="loading">Loading…</div>
 </main>
-<div id="users">
-  <div class="panel">
-    <h2>Users</h2>
-    <div id="usersList"></div>
-    <form id="userForm">
-      <input name="username" placeholder="Username" autocomplete="off" required>
-      <input name="password" type="password" placeholder="Password (min 8 chars; sets or resets)" minlength="8" required>
-      <div class="msg" id="userMsg"></div>
-      <div style="display:flex;gap:8px">
-        <button class="primary">Save user</button>
-        <button type="button" class="ghost" id="usersClose">Close</button>
-      </div>
-    </form>
-  </div>
-</div>
 <div id="login">
   <form id="loginForm">
     <h2>Jiskra <span style="color:var(--accent)">✦</span></h2>
@@ -162,7 +162,7 @@ table.matrix{width:100%;border-collapse:collapse;background:var(--card);border:1
 </div>
 
 <script>
-let CFG = null, GATE = null, EPICS = [], OPEN = new Set();
+let CFG = null, GATE = null, EPICS = [], OPEN = new Set(), PAGE = "board";
 let VIEW = localStorage.getItem("view") || "table";
 let EDITING = null; // "status:<id>" | "risk:<id>"
 
@@ -186,36 +186,110 @@ async function api(path, opts = {}){
   return j;
 }
 
-// --- user management ---
-async function openUsers(){
-  $("#users").style.display = "flex";
-  $("#userMsg").textContent = "";
-  await refreshUsers();
+// --- pages ---
+function setPage(page, fromHash){
+  PAGE = page;
+  document.body.dataset.page = page;
+  $("#settingsBtn").classList.toggle("active", page === "settings");
+  if(!fromHash) location.hash = page === "settings" ? "#settings" : "";
+  if(page === "settings"){
+    $("#summary").textContent = "Settings";
+    renderSettings();
+  }else{
+    load();
+  }
 }
 
-async function refreshUsers(){
-  const el = $("#usersList");
+// --- settings ---
+let SETTINGS_SECTION = "users";
+let RESET_USER = null; // username whose inline password-reset row is open
+
+function renderSettings(){
+  $("#content").className = "";
+  $("#content").innerHTML = `<div class="settings">
+    <nav class="snav">
+      <button class="${SETTINGS_SECTION==="users"?"active":""}" data-section="users">Users</button>
+      <button disabled title="Coming soon">Jira connection</button>
+      <button disabled title="Coming soon">Gates &amp; projects</button>
+    </nav>
+    <div class="spanel" id="spanel"></div>
+  </div>`;
+  $("#content").querySelectorAll("[data-section]").forEach(b => b.onclick = () => {
+    SETTINGS_SECTION = b.dataset.section; renderSettings();
+  });
+  renderUsersSection();
+}
+
+async function renderUsersSection(){
+  const panel = $("#spanel");
+  panel.innerHTML = `<h2>Users</h2>
+    <p class="hint">Everyone listed here can sign in and manage users — Jiskra has no roles.</p>
+    <div id="usersTable" class="loading">Loading…</div>
+    <h2 style="margin-top:6px;font-size:14px">Add user</h2>
+    <form class="adduser" id="userForm">
+      <input name="username" placeholder="Username" autocomplete="off" required>
+      <input name="password" type="password" placeholder="Password (min 8 chars)" minlength="8" required>
+      <button class="primary">Add</button>
+    </form>
+    <div class="msg" id="userMsg"></div>`;
+  $("#userForm").onsubmit = saveUser;
   try{
     const d = await api("/api/users");
-    el.innerHTML = d.users.map(u => `
-      <div class="urow"><span>${esc(u)}</span>
-        <button class="ghost" data-del-user="${esc(u)}">✕</button></div>`).join("") ||
-      '<div class="empty">No users yet.</div>';
-    el.querySelectorAll("[data-del-user]").forEach(b => b.onclick = async () => {
-      if(!confirm(`Delete user '${b.dataset.delUser}'?`)) return;
-      try{
-        await api("/api/users/"+encodeURIComponent(b.dataset.delUser), {method:"DELETE"});
-        setUserMsg("User deleted.", true);
-        await refreshUsers();
-      }catch(e){ setUserMsg(e.message, false); }
-    });
+    const me = (localStorage.getItem("username")||"");
+    $("#usersTable").innerHTML = `<table class="users">
+      <thead><tr><th>Username</th><th></th></tr></thead>
+      <tbody>${d.users.map(u => `<tr>
+        <td>${esc(u)}${u===me?' <span class="badge">you</span>':""}
+          ${RESET_USER===u?`<form class="inlinepw" data-reset-user="${esc(u)}">
+            <input name="password" type="password" placeholder="New password (min 8 chars)" minlength="8" required autofocus>
+            <button class="primary">Set</button>
+            <button type="button" class="ghost" data-cancel-reset>Cancel</button>
+          </form>`:""}
+        </td>
+        <td class="actions">
+          <button class="ghost" data-reset="${esc(u)}">Reset password</button>
+          <button class="ghost" data-del-user="${esc(u)}">Delete</button>
+        </td>
+      </tr>`).join("")}</tbody>
+    </table>`;
+    bindUserEvents();
   }catch(e){
-    el.innerHTML = `<div class="empty">${esc(e.message)}</div>`;
+    $("#usersTable").innerHTML = `<div class="empty">${esc(e.message)}</div>`;
   }
+}
+
+function bindUserEvents(){
+  const t = $("#usersTable");
+  t.querySelectorAll("[data-reset]").forEach(b => b.onclick = () => {
+    RESET_USER = RESET_USER === b.dataset.reset ? null : b.dataset.reset;
+    renderUsersSection();
+  });
+  t.querySelectorAll("[data-cancel-reset]").forEach(b => b.onclick = () => {
+    RESET_USER = null; renderUsersSection();
+  });
+  t.querySelectorAll("form[data-reset-user]").forEach(f => f.onsubmit = async ev => {
+    ev.preventDefault();
+    try{
+      await api("/api/users",{method:"POST",headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({username:f.dataset.resetUser, password:new FormData(f).get("password")})});
+      RESET_USER = null;
+      await renderUsersSection();
+      setUserMsg(`Password updated for '${f.dataset.resetUser}'.`, true);
+    }catch(e){ setUserMsg(e.message, false); }
+  });
+  t.querySelectorAll("[data-del-user]").forEach(b => b.onclick = async () => {
+    if(!confirm(`Delete user '${b.dataset.delUser}'?`)) return;
+    try{
+      await api("/api/users/"+encodeURIComponent(b.dataset.delUser), {method:"DELETE"});
+      await renderUsersSection();
+      setUserMsg("User deleted.", true);
+    }catch(e){ setUserMsg(e.message, false); }
+  });
 }
 
 function setUserMsg(text, ok){
   const m = $("#userMsg");
+  if(!m) return;
   m.textContent = text;
   m.className = "msg " + (ok ? "ok" : "err");
 }
@@ -226,9 +300,8 @@ async function saveUser(ev){
   try{
     const d = await api("/api/users", {method:"POST", headers:{"Content-Type":"application/json"},
       body: JSON.stringify({username: fd.get("username"), password: fd.get("password")})});
+    await renderUsersSection();
     setUserMsg(d.updated ? `Password updated for '${d.username}'.` : `User '${d.username}' created.`, true);
-    ev.target.reset();
-    await refreshUsers();
   }catch(e){ setUserMsg(e.message, false); }
 }
 
@@ -241,6 +314,7 @@ function showLogin(){
       const d = await api("/api/login",{method:"POST",headers:{"Content-Type":"application/json"},
         body:JSON.stringify({username:fd.get("username"),password:fd.get("password")})});
       if(d.token) localStorage.setItem("token", d.token);
+      if(d.username) localStorage.setItem("username", d.username);
       $("#login").style.display = "none";
       $("#loginError").textContent = "";
       await init();
@@ -258,10 +332,9 @@ async function init(){
   renderViewToggle();
   $("#refresh").onclick = load;
   $("#report").onclick = downloadReport;
-  $("#usersBtn").onclick = openUsers;
-  $("#usersClose").onclick = () => $("#users").style.display = "none";
-  $("#users").onclick = ev => { if(ev.target.id === "users") $("#users").style.display = "none"; };
-  $("#userForm").onsubmit = saveUser;
+  $("#settingsBtn").onclick = () => setPage(PAGE === "settings" ? "board" : "settings");
+  window.onhashchange = () => setPage(location.hash === "#settings" ? "settings" : "board", true);
+  if(location.hash === "#settings") { setPage("settings", true); return; }
   $("#quarterFilter").onchange = render;
   $("#riskFilter").onchange = render;
   await load();
