@@ -49,11 +49,31 @@ node add-user.js <username> <password> --print
   file locking is unreliable there and can corrupt the database.
 - Encryption at rest: use an encrypted volume (KMS). Passwords are stored as salted
   scrypt hashes; no Jira credentials are ever written to the database.
-- Backup: periodically copy `jiskra.db` to S3 (daily is plenty). A consistent copy can
-  be taken with `sqlite3 jiskra.db ".backup backup.db"` or by copying while the app is
-  idle.
+- Backup: run `node snapshot.js <file>` (consistent even while the app is running) and
+  ship the output to S3 — daily is plenty.
 - On first start the app auto-migrates legacy `data/db.json` / `data/users.json` files
   into SQLite and renames them to `*.migrated`.
+
+## Seeding the first deployment
+
+The owner has been using Jiskra locally; the production database must start from their
+local data (risk history, daily statuses, user accounts), not empty.
+
+1. Owner runs `node snapshot.js` locally — produces a consistent single-file snapshot
+   (`data/jiskra-seed-<date>.db`), safe to take while the app is running.
+2. Owner hands the file over (it contains the risk register and scrypt password
+   hashes — treat as internal data, no plaintext secrets).
+3. Before the app's **first start**, place it on the persistent volume as
+   `$DATA_DIR/jiskra.db`.
+4. Start the app. Done — users log in with the same credentials they use locally.
+
+With users seeded this way, `AUTH_USERS` is unnecessary — leave it unset and accounts
+are managed in the database (`node add-user.js <user> <pass>` run next to the app;
+same command updates an existing user's password). `AUTH_USERS` remains available as
+an alternative when shell access to the instance is not practical.
+
+The same `snapshot.js` is also the backup tool — schedule it (or copy its output) to
+S3.
 
 ## Topology & network
 
