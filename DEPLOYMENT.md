@@ -16,7 +16,7 @@ development fallback and is not needed in a deployment.
 |---|---|---|---|
 | `JIRA_BASE_URL` | yes | no | `https://kaseya.atlassian.net` |
 | `JIRA_EMAIL` | yes | no | account the API token belongs to |
-| `JIRA_TOKEN` | yes | **yes** | Atlassian API token → Secrets Manager |
+| `JIRA_TOKEN` | yes | **yes** | Atlassian API token → host `.env` (or a secret store) |
 | `JIRA_TARGET_QUARTER_FIELD` | yes | no | `customfield_14106` |
 | `JIRA_RAG_FIELD` | no | no | `customfield_14707` |
 | `PROJECTS` | yes | no | comma-separated Jira project keys, e.g. `ONP,OA` |
@@ -25,9 +25,9 @@ development fallback and is not needed in a deployment.
 | `PORT` | no | no | default `4777` |
 | `DATA_DIR` | no | no | default `./data` — point at the persistent volume |
 | `AUTH_ENABLED` | yes | no | `true` in any deployment |
-| `AUTH_SECRET` | yes | **yes** | 32+ random bytes hex (e.g. `openssl rand -hex 32`) → Secrets Manager. Must be stable across restarts or logins drop. |
+| `AUTH_SECRET` | yes | **yes** | 32+ random bytes hex (e.g. `openssl rand -hex 32`) → host `.env`. Must be stable across restarts or logins drop. |
 | `AUTH_TOKEN_TTL_HOURS` | no | no | default `12` |
-| `AUTH_USERS` | no | **yes** | optional override: comma-separated `username:salt:hash` entries → Secrets Manager |
+| `AUTH_USERS` | no | **yes** | optional override: comma-separated `username:salt:hash` entries → host `.env` |
 
 User accounts normally live in the `users` table of the SQLite database (seeded from
 the owner's local data — see below — and managed with `node add-user.js <user> <pass>`
@@ -86,3 +86,33 @@ S3.
 A ready-to-use `Dockerfile` is in the repository root (node:24-alpine, copies
 `server.js`, `add-user.js`, `snapshot.js` and `public/`, data volume at `/data`,
 listens on 4777).
+
+## Deployment on the overtime-tool host (docker compose)
+
+Jiskra runs as a second, independent compose stack on the same host as the Overtime
+Tool and is reached through that stack's nginx.
+
+- `docker-compose.yml` (this repo) builds the image, loads `.env`, mounts
+  `../jiskra-data` at `/data` and joins the external docker network `shared-internal`.
+  No ports are published.
+- The overtime-tool stack owns that network (`name: shared-internal`) and its nginx
+  serves Jiskra on **port 8080** behind the same IP allowlist (`nginx/conf.d/app.conf`).
+  That stack must be redeployed once, **before** the first Jiskra start, so the network
+  exists and port 8080 is published.
+- Currently plain **HTTP** (`http://<host>:8080`), like the Overtime Tool — the login
+  token and passwords travel unencrypted, only the IP allowlist restricts access.
+  Moving to a subdomain + Let's Encrypt certificate (existing certbot) removes that.
+
+One-time host setup (DevOps):
+
+1. Check out this repo next to the overtime-tool checkout; create `../jiskra-data` and
+   put the seed database there as `jiskra.db` (see *Seeding* above).
+2. `cp .env.example .env` and fill in `JIRA_TOKEN` and `AUTH_SECRET`
+   (`openssl rand -hex 32`); `chmod 600 .env`.
+3. Open TCP 8080 in the security group for the same source ranges as port 80.
+4. Add a webhook `redeploy-jiskra` next to `redeploy-overtime-tool` that runs
+   `git pull && docker compose up -d --build` in this checkout, and make sure the
+   self-hosted runner (`net-internal`) can serve this repository.
+5. Add the repository secret `REDEPLOY_TOKEN` (same mechanism as the Overtime Tool).
+
+`.github/workflows/redeploy.yml` then redeploys on every push to `master`.
