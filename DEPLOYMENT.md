@@ -20,8 +20,8 @@ development fallback and is not needed in a deployment.
 | `JIRA_TARGET_QUARTER_FIELD` | yes | no | `customfield_14106` |
 | `JIRA_RAG_FIELD` | no | no | `customfield_14707` |
 | `PROJECTS` | yes | no | comma-separated Jira project keys, e.g. `ONP,OA` |
-| `GATES` | yes | no | comma-separated gate numbers, e.g. `3,4,5` |
-| `GATE_DESCRIPTIONS` | no | no | JSON, e.g. `{"3":"Project start → Sep 2026"}` |
+| `GATES` | no | no | seeds the tabs on the first start of an **empty** database only, e.g. `3,4,5` (tab "Gate N", labels `<PROJECT>-G<N>`). Unnecessary when deploying a seeded `jiskra.db` — tabs live in the database and are edited in the app (Settings → Gates & projects) |
+| `GATE_DESCRIPTIONS` | no | no | same seeding-only role, JSON, e.g. `{"3":"Project start → Sep 2026"}` |
 | `PORT` | no | no | default `4777` |
 | `DATA_DIR` | no | no | default `./data` — point at the persistent volume |
 | `AUTH_ENABLED` | yes | no | `true` in any deployment |

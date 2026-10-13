@@ -61,10 +61,71 @@ db.exec(`
   CREATE TABLE IF NOT EXISTS users (
     username TEXT PRIMARY KEY, salt TEXT NOT NULL, hash TEXT NOT NULL
   );
+  CREATE TABLE IF NOT EXISTS tabs (
+    id TEXT PRIMARY KEY, name TEXT NOT NULL, description TEXT DEFAULT '',
+    labels TEXT NOT NULL, position INTEGER NOT NULL DEFAULT 0
+  );
+  CREATE TABLE IF NOT EXISTS meta (key TEXT PRIMARY KEY, value TEXT);
   CREATE INDEX IF NOT EXISTS idx_statuses_epic ON statuses(epic_key);
   CREATE INDEX IF NOT EXISTS idx_risks_epic ON risks(epic_key);
   CREATE INDEX IF NOT EXISTS idx_rupd_risk ON risk_updates(risk_id);
 `);
+
+// Tabs (one page per set of Jira labels) live in the database and are edited in the app
+// (Settings > Gates & projects). GATES / GATE_DESCRIPTIONS only seed the very first start.
+seedTabs();
+function seedTabs() {
+  if (db.prepare("SELECT 1 FROM meta WHERE key = 'tabs_seeded'").get()) return;
+  if (!db.prepare("SELECT COUNT(*) AS n FROM tabs").get().n) {
+    CONFIG.gates.forEach((g, i) => {
+      db.prepare("INSERT INTO tabs (id,name,description,labels,position) VALUES (?,?,?,?,?)")
+        .run(String(g), `Gate ${g}`, CONFIG.gateDescriptions[g] || "", JSON.stringify(CONFIG.projects.map((p) => `${p}-G${g}`)), i);
+    });
+  }
+  db.prepare("INSERT INTO meta (key,value) VALUES ('tabs_seeded','1')").run();
+}
+
+const listTabs = () =>
+  db.prepare("SELECT * FROM tabs ORDER BY position, rowid").all()
+    .map((t) => ({ id: t.id, name: t.name, description: t.description || "", labels: JSON.parse(t.labels) }));
+
+// Validates a PUT /api/tabs body; returns { tabs } or { error }.
+function parseTabs(body) {
+  const list = body && body.tabs;
+  if (!Array.isArray(list) || list.length > 50) return { error: "tabs must be an array of at most 50 items" };
+  const seen = new Set(), tabs = [];
+  for (const t of list) {
+    const name = String(t && t.name || "").trim();
+    if (!name || name.length > 60) return { error: "every tab needs a name (max 60 characters)" };
+    const description = String(t.description || "").trim().slice(0, 200);
+    // Jira labels cannot contain spaces; quotes/backslashes/commas are rejected so labels are safe inside JQL.
+    const labels = [...new Set((Array.isArray(t.labels) ? t.labels : []).map((l) => String(l).trim()).filter(Boolean))];
+    if (!labels.length || labels.length > 50) return { error: `tab '${name}' needs between 1 and 50 labels` };
+    if (labels.some((l) => l.length > 255 || /[\s,"'\\]/.test(l))) {
+      return { error: `tab '${name}' has an invalid label (no spaces, commas, quotes or backslashes)` };
+    }
+    let id = typeof t.id === "string" && /^[\w-]{1,32}$/.test(t.id) ? t.id : newId();
+    while (seen.has(id)) id = newId();
+    seen.add(id);
+    tabs.push({ id, name, description, labels });
+  }
+  return { tabs };
+}
+
+function saveTabs(tabs) {
+  db.exec("BEGIN");
+  try {
+    db.exec("DELETE FROM tabs");
+    tabs.forEach((t, i) => {
+      db.prepare("INSERT INTO tabs (id,name,description,labels,position) VALUES (?,?,?,?,?)")
+        .run(t.id, t.name, t.description, JSON.stringify(t.labels), i);
+    });
+    db.exec("COMMIT");
+  } catch (e) {
+    db.exec("ROLLBACK");
+    throw e;
+  }
+}
 
 // One-time migration from the old JSON files.
 migrateJson();
@@ -182,9 +243,10 @@ async function jiraGet(apiPath) {
   return res.json();
 }
 
-async function fetchGateEpics(gate) {
-  const labels = CONFIG.projects.map((p) => `${p}-G${gate}`);
-  const jql = `project in (${CONFIG.projects.join(",")}) AND issuetype = Epic AND labels in (${labels.join(",")}) ORDER BY project, key`;
+async function fetchTabEpics(tab) {
+  const labels = tab.labels.map((l) => `"${l}"`).join(",");
+  const scope = CONFIG.projects.length ? `project in (${CONFIG.projects.join(",")}) AND ` : "";
+  const jql = `${scope}issuetype = Epic AND labels in (${labels}) ORDER BY project, key`;
   const qf = CONFIG.jira.targetQuarterField;
   const ragF = CONFIG.jira.ragField;
   const fields = ["summary", "status", "labels", "duedate", "assignee", qf, ragF].filter(Boolean).join(",");
@@ -319,11 +381,18 @@ const server = http.createServer(async (req, res) => {
 
     // --- API ---
     if (url.pathname === "/api/config" && req.method === "GET") {
-      return sendJson(res, 200, { gates: CONFIG.gates, gateDescriptions: CONFIG.gateDescriptions, projects: CONFIG.projects, jiraBase: CONFIG.jira.baseUrl });
+      return sendJson(res, 200, { tabs: listTabs(), projects: CONFIG.projects, jiraBase: CONFIG.jira.baseUrl });
+    }
+    if (url.pathname === "/api/tabs" && req.method === "PUT") {
+      const parsed = parseTabs(await readBody(req));
+      if (parsed.error) return sendJson(res, 400, { error: parsed.error });
+      saveTabs(parsed.tabs);
+      return sendJson(res, 200, { tabs: listTabs() });
     }
     if (url.pathname === "/api/epics" && req.method === "GET") {
-      const gate = url.searchParams.get("gate");
-      const epics = await fetchGateEpics(gate);
+      const tab = listTabs().find((t) => t.id === url.searchParams.get("tab"));
+      if (!tab) return sendJson(res, 404, { error: "unknown tab" });
+      const epics = await fetchTabEpics(tab);
       for (const e of epics) Object.assign(e, localDataFor(e.key));
       return sendJson(res, 200, { epics });
     }

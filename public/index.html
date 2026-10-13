@@ -120,6 +120,10 @@ form.adduser{display:grid;grid-template-columns:1fr 1fr auto;gap:8px;align-items
 @media (max-width:700px){form.adduser{grid-template-columns:1fr}}
 .msg{font-size:13px;min-height:18px;margin-top:8px}
 .msg.err{color:var(--red)} .msg.ok{color:var(--green)}
+.tabrow{display:grid;grid-template-columns:1fr 1.7fr 1.2fr auto;gap:8px;align-items:center;margin-bottom:8px}
+@media (max-width:900px){.tabrow{grid-template-columns:1fr}}
+.tabrow .rowbtns{display:flex;gap:4px}
+.tabactions{display:flex;justify-content:space-between;gap:8px;margin-top:12px}
 .inlinepw{display:flex;gap:6px;margin-top:6px}
 .inlinepw input{flex:1}
 #login{position:fixed;inset:0;background:var(--bg);display:none;align-items:center;justify-content:center;z-index:20}
@@ -162,7 +166,8 @@ form.adduser{display:grid;grid-template-columns:1fr 1fr auto;gap:8px;align-items
 </div>
 
 <script>
-let CFG = null, GATE = null, EPICS = [], OPEN = new Set(), PAGE = "board";
+let CFG = null, TAB = null, EPICS = [], OPEN = new Set(), PAGE = "board";
+let TAB_DRAFT = null; // working copy of CFG.tabs while the Gates & projects editor is open
 let VIEW = localStorage.getItem("view") || "table";
 let EDITING = null; // "status:<id>" | "risk:<id>"
 
@@ -193,6 +198,7 @@ function setPage(page, fromHash){
   $("#settingsBtn").classList.toggle("active", page === "settings");
   if(!fromHash) location.hash = page === "settings" ? "#settings" : "";
   if(page === "settings"){
+    TAB_DRAFT = null;
     $("#summary").textContent = "Settings";
     renderSettings();
   }else{
@@ -210,14 +216,84 @@ function renderSettings(){
     <nav class="snav">
       <button class="${SETTINGS_SECTION==="users"?"active":""}" data-section="users">Users</button>
       <button disabled title="Coming soon">Jira connection</button>
-      <button disabled title="Coming soon">Gates &amp; projects</button>
+      <button class="${SETTINGS_SECTION==="tabs"?"active":""}" data-section="tabs">Gates &amp; projects</button>
     </nav>
     <div class="spanel" id="spanel"></div>
   </div>`;
   $("#content").querySelectorAll("[data-section]").forEach(b => b.onclick = () => {
-    SETTINGS_SECTION = b.dataset.section; renderSettings();
+    SETTINGS_SECTION = b.dataset.section; TAB_DRAFT = null; renderSettings();
   });
-  renderUsersSection();
+  if(SETTINGS_SECTION === "tabs") renderTabsSection(); else renderUsersSection();
+}
+
+// --- settings: tabs (one page per set of Jira labels) ---
+function tabRowHtml(t, i){
+  return `<div class="tabrow" data-i="${i}">
+    <input data-f="name" placeholder="Tab name, e.g. Gate 3" maxlength="60" value="${esc(t.name)}">
+    <input data-f="labels" placeholder="Jira labels, e.g. ONP-G3, OA-G3" value="${esc(t.labels.join(", "))}">
+    <input data-f="description" placeholder="Description (optional)" maxlength="200" value="${esc(t.description)}">
+    <div class="rowbtns">
+      <button type="button" class="ghost" data-up title="Move left">↑</button>
+      <button type="button" class="ghost" data-down title="Move right">↓</button>
+      <button type="button" class="ghost" data-del-tab>Delete</button>
+    </div>
+  </div>`;
+}
+
+function renderTabsSection(){
+  if(!TAB_DRAFT) TAB_DRAFT = CFG.tabs.map(t => ({...t, labels:[...t.labels]}));
+  const panel = $("#spanel");
+  panel.innerHTML = `<h2>Gates &amp; projects</h2>
+    <p class="hint">Each tab is one page. It lists every epic that carries <em>any</em> of the tab's Jira labels
+      (separate labels with commas). Risks and statuses are stored per epic, so they are kept when a tab is changed or removed.</p>
+    <p class="hint">Projects searched: <strong>${CFG.projects.length ? CFG.projects.map(esc).join(", ") : "all"}</strong>
+      (set by the PROJECTS environment variable).</p>
+    <div id="tabRows">${TAB_DRAFT.map(tabRowHtml).join("") || '<div class="empty">No tabs yet.</div>'}</div>
+    <div class="tabactions">
+      <button type="button" class="ghost" id="addTab">+ Add tab</button>
+      <button type="button" class="primary" id="saveTabs">Save</button>
+    </div>
+    <div class="msg" id="tabMsg"></div>`;
+  const rows = $("#tabRows");
+  rows.querySelectorAll(".tabrow").forEach(row => {
+    const i = Number(row.dataset.i);
+    row.querySelectorAll("input[data-f]").forEach(inp => inp.oninput = () => {
+      TAB_DRAFT[i][inp.dataset.f] = inp.dataset.f === "labels" ? inp.value.split(/[\s,]+/).filter(Boolean) : inp.value;
+    });
+    row.querySelector("[data-up]").onclick = () => moveTab(i, -1);
+    row.querySelector("[data-down]").onclick = () => moveTab(i, 1);
+    row.querySelector("[data-del-tab]").onclick = () => {
+      if(!confirm(`Remove tab '${TAB_DRAFT[i].name || "(unnamed)"}'? Nothing changes until you press Save.`)) return;
+      TAB_DRAFT.splice(i, 1); renderTabsSection();
+    };
+  });
+  $("#addTab").onclick = () => { TAB_DRAFT.push({name:"", description:"", labels:[]}); renderTabsSection(); };
+  $("#saveTabs").onclick = saveTabs;
+}
+
+function moveTab(i, dir){
+  const j = i + dir;
+  if(j < 0 || j >= TAB_DRAFT.length) return;
+  [TAB_DRAFT[i], TAB_DRAFT[j]] = [TAB_DRAFT[j], TAB_DRAFT[i]];
+  renderTabsSection();
+}
+
+async function saveTabs(){
+  const msg = $("#tabMsg");
+  try{
+    const d = await api("/api/tabs", {method:"PUT", headers:{"Content-Type":"application/json"},
+      body: JSON.stringify({tabs: TAB_DRAFT})});
+    CFG.tabs = d.tabs;
+    TAB_DRAFT = null;
+    pickTab();
+    renderTabs();
+    renderTabsSection();
+    $("#tabMsg").textContent = "Saved.";
+    $("#tabMsg").className = "msg ok";
+  }catch(e){
+    msg.textContent = e.message;
+    msg.className = "msg err";
+  }
 }
 
 async function renderUsersSection(){
@@ -235,6 +311,7 @@ async function renderUsersSection(){
   $("#userForm").onsubmit = saveUser;
   try{
     const d = await api("/api/users");
+    if(!$("#usersTable")) return; // user switched to another settings section while loading
     const me = (localStorage.getItem("username")||"");
     $("#usersTable").innerHTML = `<table class="users">
       <thead><tr><th>Username</th><th></th></tr></thead>
@@ -254,7 +331,7 @@ async function renderUsersSection(){
     </table>`;
     bindUserEvents();
   }catch(e){
-    $("#usersTable").innerHTML = `<div class="empty">${esc(e.message)}</div>`;
+    if($("#usersTable")) $("#usersTable").innerHTML = `<div class="empty">${esc(e.message)}</div>`;
   }
 }
 
@@ -326,8 +403,7 @@ function showLogin(){
 
 async function init(){
   CFG = await api("/api/config");
-  GATE = localStorage.getItem("gate") || String(CFG.gates[0]);
-  if(!CFG.gates.map(String).includes(GATE)) GATE = String(CFG.gates[0]);
+  pickTab();
   renderTabs();
   renderViewToggle();
   $("#refresh").onclick = load;
@@ -348,18 +424,34 @@ function renderViewToggle(){
   });
 }
 
+const currentTab = () => CFG.tabs.find(t => t.id === TAB) || null;
+
+// Keep the remembered tab if it still exists, otherwise fall back to the first one.
+// ("gate" is the pre-tabs localStorage key; seeded tab ids equal the old gate numbers.)
+function pickTab(){
+  const saved = localStorage.getItem("tab") || localStorage.getItem("gate");
+  TAB = CFG.tabs.some(t => t.id === saved) ? saved : (CFG.tabs[0] ? CFG.tabs[0].id : null);
+}
+
 function renderTabs(){
-  $("#tabs").innerHTML = CFG.gates.map(g =>
-    `<button class="tab ${String(g)===GATE?"active":""}" data-g="${g}" title="${esc((CFG.gateDescriptions||{})[g]||"")}">Gate ${g}</button>`).join("");
+  $("#tabs").innerHTML = CFG.tabs.map(t =>
+    `<button class="tab ${t.id===TAB?"active":""}" data-id="${esc(t.id)}" title="${esc(t.description)}">${esc(t.name)}</button>`).join("");
   $("#tabs").querySelectorAll(".tab").forEach(b => b.onclick = () => {
-    GATE = b.dataset.g; localStorage.setItem("gate", GATE); renderTabs(); load();
+    TAB = b.dataset.id; localStorage.setItem("tab", TAB); renderTabs(); load();
   });
 }
 
 async function load(){
-  $("#content").innerHTML = '<div class="loading">Loading Gate '+esc(GATE)+' epics from Jira…</div>';
+  const tab = currentTab();
+  if(!tab){
+    $("#summary").textContent = "";
+    $("#content").className = "";
+    $("#content").innerHTML = '<div class="empty">No tabs yet. Add one under <a href="#settings">Settings → Gates &amp; projects</a>.</div>';
+    return;
+  }
+  $("#content").innerHTML = '<div class="loading">Loading '+esc(tab.name)+' epics from Jira…</div>';
   try{
-    const d = await api("/api/epics?gate="+encodeURIComponent(GATE));
+    const d = await api("/api/epics?tab="+encodeURIComponent(tab.id));
     EPICS = d.epics;
     const quarters = [...new Set(EPICS.map(e=>e.targetQuarter).filter(Boolean))].sort();
     const qf = $("#quarterFilter"); const cur = qf.value;
@@ -373,13 +465,14 @@ async function load(){
 function openRisks(e){ return e.risks.filter(r=>r.status==="open"); }
 
 function render(){
+  if(!currentTab()) return;
   const q = $("#quarterFilter").value, rf = $("#riskFilter").value;
   let list = EPICS;
   if(q) list = list.filter(e=>e.targetQuarter===q);
   if(rf==="open-risks") list = list.filter(e=>openRisks(e).length);
   const totalOpen = list.reduce((n,e)=>n+openRisks(e).length,0);
-  const gdesc = (CFG.gateDescriptions||{})[GATE];
-  $("#summary").textContent = `Gate ${GATE}${gdesc?` (${gdesc})`:""} · ${list.length} epic${list.length===1?"":"s"} · ${totalOpen} open risk${totalOpen===1?"":"s"}`;
+  const tab = currentTab();
+  $("#summary").textContent = `${tab.name}${tab.description?` (${tab.description})`:""} · ${list.length} epic${list.length===1?"":"s"} · ${totalOpen} open risk${totalOpen===1?"":"s"}`;
   if(!list.length){ $("#content").innerHTML = '<div class="empty">No epics match.</div>'; return; }
 
   if(VIEW === "table"){
@@ -658,15 +751,16 @@ function bindEvents(){
   });
 }
 
-// --- Executive report: one standalone HTML file covering all gates ---
+// --- Executive report: one standalone HTML file covering all tabs ---
 async function downloadReport(){
+  if(!CFG.tabs.length) return;
   const btn = $("#report");
   btn.disabled = true; btn.textContent = "⏳ Report…";
   try{
     const sections = [];
-    for(const g of CFG.gates){
-      const d = await api("/api/epics?gate="+encodeURIComponent(g));
-      sections.push({ gate: String(g), list: d.epics });
+    for(const t of CFG.tabs){
+      const d = await api("/api/epics?tab="+encodeURIComponent(t.id));
+      sections.push({ tab: t, list: d.epics });
     }
     const html = reportHtml(sections);
     const a = document.createElement("a");
@@ -681,8 +775,8 @@ async function downloadReport(){
 
 const ragColor = r => !r ? "#9aa3ad" : /green/i.test(r) ? "#22a858" : /amber|yellow/i.test(r) ? "#eab308" : /red/i.test(r) ? "#dc2626" : "#9aa3ad";
 
-function gateSectionHtml(gate, list){
-  const gdesc = (CFG.gateDescriptions||{})[gate] || "";
+function gateSectionHtml(tab, list){
+  const gdesc = tab.description || "";
   const agg = list.reduce((a,e)=>({done:a.done+e.progress.done,total:a.total+e.progress.total}),{done:0,total:0});
   const pct = agg.total ? Math.round(100*agg.done/agg.total) : 0;
   const allOpen = list.flatMap(e => openRisks(e).map(r => ({epic:e, risk:r})));
@@ -718,7 +812,7 @@ function gateSectionHtml(gate, list){
   }).join("");
 
   return `<section class="gate">
-<h1>Gate ${esc(gate)}</h1>
+<h1>${esc(tab.name)}</h1>
 <div class="sub">${esc(gdesc)}</div>
 <div class="kpis">
   <div class="kpi"><div class="n">${list.length}</div><div class="l">Epics</div></div>
@@ -758,17 +852,17 @@ section.gate:first-of-type{margin-top:8px}
 @media print{body{margin:0} section.gate{break-before:page} section.gate:first-of-type{break-before:auto}}
 </style></head><body>
 <div class="head">
-  <h1>Delivery Report — Gates ${sections.map(s=>esc(s.gate)).join(", ")}</h1>
+  <h1>Delivery Report — ${sections.map(s=>esc(s.tab.name)).join(", ")}</h1>
   <div class="sub">Generated ${date} · Projects: ${CFG.projects.map(esc).join(", ")}</div>
 </div>
-${sections.map(s => gateSectionHtml(s.gate, s.list)).join("")}
+${sections.map(s => gateSectionHtml(s.tab, s.list)).join("")}
 <div class="footer">Generated by Jiskra · data from ${esc(CFG.jiraBase)} + local risk register</div>
 </body></html>`;
 }
 
 // Refresh one epic's local data without re-hitting Jira for the whole gate.
 async function reloadLocal(key){
-  const d = await api("/api/epics?gate="+encodeURIComponent(GATE));
+  const d = await api("/api/epics?tab="+encodeURIComponent(TAB));
   const fresh = d.epics.find(x=>x.key===key);
   const idx = EPICS.findIndex(x=>x.key===key);
   if(fresh && idx>-1){ EPICS[idx].statuses = fresh.statuses; EPICS[idx].risks = fresh.risks; }

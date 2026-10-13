@@ -20,8 +20,10 @@ variables, persistent volume, auth setup.
 
 ## How it works
 
-- Epics are fetched live from Jira by gate label (`<PROJECT>-G<N>`, e.g. `ONP-G3`, `OA-G3`)
-  across the projects listed in `config.json`.
+- Each tab (page) is defined by you under **Settings → Gates & projects**: a name, an
+  optional description and a list of Jira labels (e.g. `ONP-G3, OA-G3`). The tab shows every
+  epic carrying any of those labels, across the projects listed in `config.json`/`PROJECTS`.
+  Tabs are stored in the database; add, rename, reorder or remove them in the app.
 - Target launch quarter comes from the Jira custom field `Target Launch Quarter`
   (`customfield_14106`).
 - Daily statuses, risks and users are stored locally in `data/jiskra.db` (SQLite).
@@ -42,7 +44,9 @@ variables, persistent volume, auth setup.
 }
 ```
 
-Add a project or gate by editing this file and restarting.
+`gates` / `gateDescriptions` only seed the tabs on the very first start of a new database
+(each gate N becomes a tab "Gate N" with labels `<PROJECT>-G<N>`); after that, manage tabs
+in the app. Add a project by editing this file (or `PROJECTS`) and restarting.
 
 ## Authentication (for deployments)
 
