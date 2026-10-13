@@ -13,10 +13,11 @@ lacks: a per-epic daily status log and a simple risk tracker, kept entirely outs
 
 ## 2. Context and domain model
 
-- Delivery is organized in **NPI gates** (currently gates 3, 4, 5; gates 2 and 6 exist
-  in some projects and may be added).
-- An epic belongs to a gate via a **Jira label** following the convention
-  `<PROJECT_KEY>-G<N>` (e.g. `ONP-G3`, `OA-G4`).
+- Delivery is organized in **NPI gates** (currently gates 3, 4, 5; more can be added).
+- An epic belongs to a gate via **Jira labels**. In practice each project has its own
+  label per gate, `<PROJECT_KEY>-G<N>` (e.g. `ONP-G3`, `OA-G4`), but Jiskra does not
+  assume that convention: a **tab** is defined in the app as a name plus any list of
+  labels.
 - Each epic has a **Target Launch Quarter** — a Jira single-select custom field
   (`customfield_14106`, values like `2026-Q2`).
 - Epics come from multiple Jira projects (currently `ONP` and `OA`).
@@ -24,8 +25,10 @@ lacks: a per-epic daily status log and a simple risk tracker, kept entirely outs
 ## 3. Functional requirements (implemented in v1)
 
 ### 3.1 Gate views
-- One tab per configured gate. Selecting a tab loads, live from Jira, all epics across
-  the configured projects that carry that gate's label.
+- One tab per configured tab definition (name, optional description, list of Jira
+  labels; edited under Settings → Gates & projects and stored in the database).
+  Selecting a tab loads, live from Jira, all epics across the configured projects that
+  carry **any** of the tab's labels. Tabs can be added, renamed, reordered and removed.
 - Epics are grouped by project and show: key (link to Jira), summary, Jira status
   (color-coded by status category), RAG status (a colored dot read from the Jira
   "Operating Status" select field, `customfield_14707` — configurable as
@@ -59,8 +62,8 @@ lacks: a per-epic daily status log and a simple risk tracker, kept entirely outs
 
 ### 3.4 Settings & user management
 - A gear icon in the header opens a **Settings page** (hash-routed, `#settings`) with a
-  sidebar of sections — Users today; Jira connection and Gates & projects are planned
-  there (section 6).
+  sidebar of sections — Users and Gates & projects (the tab editor); Jira connection is
+  planned (section 6).
 - The Users section lists accounts in a table with per-row "Reset password" (inline
   form) and "Delete", plus an add-user form. Any signed-in user can manage accounts —
   no roles, it is a 2–3 person tool.
@@ -93,9 +96,10 @@ lacks: a per-epic daily status log and a simple risk tracker, kept entirely outs
   **zero npm dependencies**.
 - **Authentication** (for deployed instances; off by default locally via
   `auth.enabled`): username/password accounts stored in the `users` table of
-  `data/jiskra.db` with scrypt-hashed salted passwords, managed by
-  `node add-user.js <user> <pass>`; deployments can instead supply accounts via the
-  `AUTH_USERS` env var (`add-user.js --print` emits an entry).
+  `data/jiskra.db` with scrypt-hashed salted passwords, managed on the in-app Users page
+  (`node add-user.js <user> <pass>` only bootstraps an empty database); deployments can
+  instead supply accounts via the `AUTH_USERS` env var (`add-user.js --print` emits an
+  entry), which makes the Users page read-only.
   `POST /api/login` issues an HS256 JWT (signed with `auth.secret`, auto-generated
   into config.json on first run; TTL `auth.tokenTtlHours`, default 12h). All other
   `/api/*` routes require `Authorization: Bearer <token>`; the UI shows a sign-in
@@ -119,27 +123,27 @@ so a deployment needs no config file at all (see `DEPLOYMENT.md` for the full ta
 | `jira.targetQuarterField` | `JIRA_TARGET_QUARTER_FIELD` | custom field id of Target Launch Quarter |
 | `jira.ragField` | `JIRA_RAG_FIELD` | custom field id of the RAG / Operating Status select |
 | `projects` | `PROJECTS` (comma-sep) | Jira project keys to scan |
-| `gates` | `GATES` (comma-sep) | gate numbers → one tab each |
-| `gateDescriptions` | `GATE_DESCRIPTIONS` (JSON) | gate time ranges shown in the UI |
+| `gates` | `GATES` (comma-sep) | seeds the tabs of an empty database once (tab "Gate N", labels `<PROJECT>-G<N>`); afterwards tabs are managed in the app |
+| `gateDescriptions` | `GATE_DESCRIPTIONS` (JSON) | same seeding-only role: tab descriptions |
 | `port` | `PORT` | local HTTP port |
 | — | `DATA_DIR` | where `jiskra.db` lives (default `./data`) |
 | `auth.*` | `AUTH_ENABLED` / `AUTH_SECRET` / `AUTH_TOKEN_TTL_HOURS` / `AUTH_USERS` | authentication settings |
 
 Changing configuration requires a restart. Deployment target: one instance, persistent
-EBS volume for `DATA_DIR` (not EFS/NFS — SQLite locking), HTTPS in front, secrets from
-AWS Secrets Manager.
+EBS volume for `DATA_DIR` (not EFS/NFS — SQLite locking), HTTPS in front, secrets
+(`JIRA_TOKEN`, `AUTH_SECRET`) injected as environment variables by whatever the
+deployment uses (e.g. a host `.env`).
 
 ## 6. Planned: generic configuration (next step — not yet implemented)
 
 Goal: the tool must be generic and usable by anyone, with no hand-editing of JSON.
 
 - **Settings screen in the UI** for everything in section 5: Jira base URL, email,
-  API token, project keys, gates, target-quarter field.
+  API token, project keys, target-quarter field (tabs/gates are already editable in the
+  app).
 - **First-run setup**: when no configuration exists, the app opens on the settings
   screen instead of failing; a "test connection" button validates the Jira credentials
   and lists accessible projects.
-- **Configurable gate-label convention**: the `<PROJECT>-G<N>` pattern becomes a
-  template (e.g. `{project}-G{gate}`) so other teams' naming schemes work.
 - **Field discovery**: pick the target-quarter field from a searchable list fetched
   from Jira instead of typing a `customfield_*` id.
 - Config changes apply without restarting the server; the token is stored server-side

@@ -29,16 +29,23 @@ development fallback and is not needed in a deployment.
 | `AUTH_TOKEN_TTL_HOURS` | no | no | default `12` |
 | `AUTH_USERS` | no | **yes** | optional override: comma-separated `username:salt:hash` entries → host `.env` |
 
-User accounts normally live in the `users` table of the SQLite database (seeded from
-the owner's local data — see below — and managed with `node add-user.js <user> <pass>`
-run next to the app). Set `AUTH_USERS` only when shell access to the instance is not
-practical; the owner generates each entry locally with
-`node add-user.js <username> <password> --print` (the password itself is never stored)
-and when it is set, the database's `users` table is ignored.
+User accounts live in the `users` table of the SQLite database. They arrive with the
+seed database (see below) and are managed in the app itself, on the **Users** page under
+Settings: any signed-in user can add users, reset passwords and delete users (the last
+user and your own account cannot be deleted). No shell access to the instance is needed.
+
+`node add-user.js <user> <pass>` (run next to the app, with `DATA_DIR` set) is only a
+fallback for when nobody can sign in, e.g. a deployment started with an empty database.
+The password is a command-line argument, so it ends up in shell history.
+
+`AUTH_USERS` is an alternative for when accounts must **not** be managed in the app: the
+owner generates each entry locally with `node add-user.js <username> <password> --print`
+(the password itself is never stored). While it is set, the database's `users` table is
+ignored and the Users page is read-only.
 
 ## Storage
 
-- All application data (risk register, daily statuses, users) lives in one SQLite file:
+- All application data (risk register, daily statuses, users, tab definitions) lives in one SQLite file:
   `$DATA_DIR/jiskra.db` (WAL mode — expect `-wal`/`-shm` siblings).
 - Mount a **persistent EBS volume** at `DATA_DIR`. **Do not use EFS/NFS** — SQLite's
   file locking is unreliable there and can corrupt the database.
@@ -52,7 +59,7 @@ and when it is set, the database's `users` table is ignored.
 ## Seeding the first deployment
 
 The owner has been using Jiskra locally; the production database must start from their
-local data (risk history, daily statuses, user accounts), not empty.
+local data (risk history, daily statuses, user accounts, tab definitions), not empty.
 
 1. Owner runs `node snapshot.js` locally — produces a consistent single-file snapshot
    (`data/jiskra-seed-<date>.db`), safe to take while the app is running.
@@ -62,13 +69,11 @@ local data (risk history, daily statuses, user accounts), not empty.
    `$DATA_DIR/jiskra.db`.
 4. Start the app. Done — users log in with the same credentials they use locally.
 
-With users seeded this way, `AUTH_USERS` is unnecessary — leave it unset and accounts
-are managed from the app's own **Users** page (any signed-in user can add/reset/delete;
-`node add-user.js` works too). `AUTH_USERS` remains available as an alternative when
-the team must not manage accounts in-app; it makes the Users page read-only.
+With users and tabs seeded this way, leave `AUTH_USERS`, `GATES` and `GATE_DESCRIPTIONS`
+unset: accounts are managed on the app's **Users** page and tabs under **Gates & projects**.
 
-The same `snapshot.js` is also the backup tool — schedule it (or copy its output) to
-S3.
+Take the snapshot after starting the current version of the app locally at least once, so
+that the tab definitions are already in the file.
 
 ## Topology & network
 

@@ -51,7 +51,9 @@ in the app. Add a project by editing this file (or `PROJECTS`) and restarting.
 ## Authentication (for deployments)
 
 With `auth.enabled: true`, every `/api/*` call requires a JWT issued by
-`POST /api/login`; the UI shows a sign-in screen. Manage accounts with:
+`POST /api/login`; the UI shows a sign-in screen. Accounts are managed in the app, on the
+**Users** page under Settings (the gear icon). Only to create the very first account on an
+empty database, use the CLI:
 
 ```
 node add-user.js <username> <password>
@@ -59,7 +61,7 @@ node add-user.js <username> <password>
 
 Users live in the `users` table of `data/jiskra.db` (scrypt-hashed, gitignored), or in
 the `AUTH_USERS` env var for deployments (`add-user.js <user> <pass> --print` emits the
-entry). The signing secret is auto-generated into `config.json` on first run (set
+entry; the Users page is then read-only). The signing secret is auto-generated into `config.json` on first run (set
 `AUTH_SECRET` in deployments). Run a deployed instance behind HTTPS. For local
 single-user use, set `auth.enabled: false`.
 
