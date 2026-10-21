@@ -1,0 +1,998 @@
+{
+  "app": "jiskra",
+  "version": 1,
+  "exportedAt": "2026-10-21T12:26:55.233Z",
+  "tabs": [
+    {
+      "id": "3",
+      "name": "Gate 3",
+      "description": "Project start → Sep 2026",
+      "labels": "[\"ONP-G3\",\"OA-G3\"]",
+      "position": 0
+    },
+    {
+      "id": "4",
+      "name": "Gate 4",
+      "description": "Oct – Nov 2026",
+      "labels": "[\"ONP-G4\",\"OA-G4\"]",
+      "position": 1
+    },
+    {
+      "id": "5",
+      "name": "Gate 5",
+      "description": "Dec 2026 – Jan 2027",
+      "labels": "[\"ONP-G5\",\"OA-G5\"]",
+      "position": 2
+    },
+    {
+      "id": "x0ae51ga",
+      "name": "Gate 6",
+      "description": "Feb 2027 - March 2027",
+      "labels": "[\"ONP-G6\",\"OA-G6\"]",
+      "position": 3
+    },
+    {
+      "id": "vmod008i",
+      "name": "Gate 7",
+      "description": "",
+      "labels": "[\"ONP-G7\",\"OA-G7\"]",
+      "position": 4
+    }
+  ],
+  "statuses": [
+    {
+      "id": "l02aqy7g",
+      "epic_key": "ONP-211",
+      "date": "2026-10-06",
+      "author": "",
+      "text": "Completed and launched.",
+      "created_at": "2026-10-06T11:06:45.229Z",
+      "updated_at": "2026-10-07T13:52:05.252Z"
+    },
+    {
+      "id": "gnxzurul",
+      "epic_key": "ONP-1364",
+      "date": "2026-10-06",
+      "author": "Norbert",
+      "text": "Development on track, but test coverage is lagging due to competing priorities — currently 2.5 developers assigned. Vadim joins the team this week to close the gap.",
+      "created_at": "2026-10-06T10:54:55.134Z",
+      "updated_at": "2026-10-07T13:52:05.283Z"
+    },
+    {
+      "id": "wf9g3fbc",
+      "epic_key": "OA-401",
+      "date": "2026-10-06",
+      "author": "Michal R",
+      "text": "Launched. Remaining work is administrative — Jira cleanup; outstanding tickets have been moved to later scope.",
+      "created_at": "2026-10-06T11:03:35.592Z",
+      "updated_at": "2026-10-07T13:52:05.227Z"
+    },
+    {
+      "id": "frpcwnbi",
+      "epic_key": "OA-444",
+      "date": "2026-10-06",
+      "author": "Michal R",
+      "text": "Launched at 80%; one bug found post-launch, fix planned within the current sprint.",
+      "created_at": "2026-10-06T11:07:31.507Z",
+      "updated_at": "2026-10-07T13:52:05.242Z"
+    },
+    {
+      "id": "j2r8yck9",
+      "epic_key": "ONP-175",
+      "date": "2026-10-06",
+      "author": "Anton",
+      "text": "Partially launched — SaaS portion still in progress. No risk to the October timeline.",
+      "created_at": "2026-10-06T11:06:00.063Z",
+      "updated_at": "2026-10-07T13:52:05.248Z"
+    },
+    {
+      "id": "2n18705d",
+      "epic_key": "ONP-212",
+      "date": "2026-10-07",
+      "author": "Gustavo",
+      "text": "Near completion — one fix remaining before release.",
+      "created_at": "2026-10-07T09:03:49.994Z",
+      "updated_at": "2026-10-07T13:52:05.257Z"
+    },
+    {
+      "id": "a476hk0l",
+      "epic_key": "ONP-212",
+      "date": "2026-10-06",
+      "author": "Anton",
+      "text": "2 tickets left , no risks to be delivered for OCT.",
+      "created_at": "2026-10-06T11:08:44.063Z",
+      "updated_at": null
+    },
+    {
+      "id": "4162txii",
+      "epic_key": "ONP-216",
+      "date": "2026-10-06",
+      "author": "Anton",
+      "text": "On track for release Thursday, Oct 8.",
+      "created_at": "2026-10-06T11:09:19.076Z",
+      "updated_at": "2026-10-07T13:52:05.261Z"
+    },
+    {
+      "id": "1yuktw17",
+      "epic_key": "OA-17",
+      "date": "2026-10-06",
+      "author": "Michal R",
+      "text": "out of scope for G4 , to be removed from the list",
+      "created_at": "2026-10-06T11:10:39.850Z",
+      "updated_at": null
+    },
+    {
+      "id": "xeu4k635",
+      "epic_key": "OA-132",
+      "date": "2026-10-06",
+      "author": "Michal Roztoczynski",
+      "text": "Work is progressing as planned",
+      "created_at": "2026-10-06T11:16:40.908Z",
+      "updated_at": null
+    },
+    {
+      "id": "83o3vp5d",
+      "epic_key": "OA-217",
+      "date": "2026-10-06",
+      "author": "Michal Roztoczynski",
+      "text": "Deprioritized — Alex reassigned to support the KOS workstream in Tenant Merge. Additionally blocked by ONP-1913 (Tenant API Keys Management).",
+      "created_at": "2026-10-06T11:18:58.780Z",
+      "updated_at": "2026-10-07T13:52:05.272Z"
+    },
+    {
+      "id": "vscn2kxj",
+      "epic_key": "OA-391",
+      "date": "2026-10-06",
+      "author": "Michal Roztoczynski",
+      "text": "actively in development",
+      "created_at": "2026-10-06T11:24:09.865Z",
+      "updated_at": null
+    },
+    {
+      "id": "1jbxfy8c",
+      "epic_key": "ONP-215",
+      "date": "2026-10-06",
+      "author": "Anton",
+      "text": "Launched; epic to be closed.",
+      "created_at": "2026-10-06T11:25:22.237Z",
+      "updated_at": "2026-10-07T13:52:05.278Z"
+    },
+    {
+      "id": "5ki7uict",
+      "epic_key": "ONP-1092",
+      "date": "2026-10-06",
+      "author": "Anton",
+      "text": "In progress; no risks identified.",
+      "created_at": "2026-10-06T11:25:46.376Z",
+      "updated_at": "2026-10-07T13:52:05.280Z"
+    },
+    {
+      "id": "qmp6gy6f",
+      "epic_key": "ONP-1913",
+      "date": "2026-10-06",
+      "author": "Anton",
+      "text": "Scope newly defined by Product; awaiting planning.",
+      "created_at": "2026-10-06T11:26:16.662Z",
+      "updated_at": "2026-10-07T13:52:05.296Z"
+    },
+    {
+      "id": "x2c1u29k",
+      "epic_key": "OA-364",
+      "date": "2026-10-06",
+      "author": "Michal Roztoczynski",
+      "text": "to be removed from the list",
+      "created_at": "2026-10-06T11:27:12.527Z",
+      "updated_at": null
+    },
+    {
+      "id": "2gvvkz3g",
+      "epic_key": "OA-394",
+      "date": "2026-10-06",
+      "author": "Michal Brewinski",
+      "text": "In progress; no external dependencies.",
+      "created_at": "2026-10-06T11:31:01.316Z",
+      "updated_at": "2026-10-07T13:52:05.297Z"
+    },
+    {
+      "id": "5nenhne6",
+      "epic_key": "ONP-214",
+      "date": "2026-10-06",
+      "author": "Michal Brewinski",
+      "text": "In progress; no external dependencies.",
+      "created_at": "2026-10-06T11:31:22.468Z",
+      "updated_at": "2026-10-07T13:52:05.299Z"
+    },
+    {
+      "id": "dd7agu0r",
+      "epic_key": "ONP-1056",
+      "date": "2026-10-06",
+      "author": "Michal Brewinski",
+      "text": "In progress; no external dependencies.",
+      "created_at": "2026-10-06T11:32:18.748Z",
+      "updated_at": "2026-10-07T13:52:05.300Z"
+    },
+    {
+      "id": "a376bdvq",
+      "epic_key": "OA-133",
+      "date": "2026-10-06",
+      "author": "Michal Roztoczynski",
+      "text": "Work is progressing as planned\n",
+      "created_at": "2026-10-06T11:41:29.529Z",
+      "updated_at": null
+    },
+    {
+      "id": "2fvms6vd",
+      "epic_key": "OA-134",
+      "date": "2026-10-06",
+      "author": "Michal Roztoczynski",
+      "text": "Work is progressing as planned\n",
+      "created_at": "2026-10-06T11:41:35.315Z",
+      "updated_at": null
+    },
+    {
+      "id": "y5jnvo6n",
+      "epic_key": "OA-340",
+      "date": "2026-10-06",
+      "author": "Michal Roztoczynski",
+      "text": "API is released; additional actions are being added incrementally. Michał to decide whether to close this epic or track the remaining actions separately.",
+      "created_at": "2026-10-06T11:40:54.566Z",
+      "updated_at": "2026-10-07T13:52:05.275Z"
+    },
+    {
+      "id": "az79hwb2",
+      "epic_key": "OA-618",
+      "date": "2026-10-06",
+      "author": "Ekaterina",
+      "text": "AI res centrer should be postponed? and release V1 1st ,  onp-1092",
+      "created_at": "2026-10-06T12:37:02.967Z",
+      "updated_at": null
+    },
+    {
+      "id": "lvkou80x",
+      "epic_key": "ONP-1346",
+      "date": "2026-10-07",
+      "author": "Gustavo",
+      "text": "Planning completed for the epic.",
+      "created_at": "2026-10-07T09:04:44.623Z",
+      "updated_at": "2026-10-07T13:52:05.302Z"
+    },
+    {
+      "id": "tedbb1on",
+      "epic_key": "OA-394",
+      "date": "2026-10-08",
+      "author": "Denis Kurgan",
+      "text": "Backend progressing well — Nikita demoed a working proof of concept on UniView stage data; architecture walkthrough with the One API team later today. Main pending item: DevOps setup — Kate to find capacity (possibly Artsiom); Nikita already in touch with Vadzim on infrastructure. Jira status 'Technical Decomposition' is outdated — development is in progress.",
+      "created_at": "2026-10-08T11:32:10.259Z",
+      "updated_at": "2026-10-08T11:34:53.343Z"
+    },
+    {
+      "id": "rct9naj6",
+      "epic_key": "ONP-214",
+      "date": "2026-10-08",
+      "author": "Denis Kurgan",
+      "text": "UI progressing well — partially done, running locally only for now; remaining work depends on backend API availability.",
+      "created_at": "2026-10-08T11:32:10.270Z",
+      "updated_at": null
+    },
+    {
+      "id": "km61f8oz",
+      "epic_key": "ONP-1056",
+      "date": "2026-10-08",
+      "author": "Michał Brewiński",
+      "text": "Likely out of scope for this gate — legacy item from Matt (v1 with additional modifiers). Michał B. to confirm with Matt and probably move it to a future release.",
+      "created_at": "2026-10-08T11:32:10.272Z",
+      "updated_at": null
+    },
+    {
+      "id": "r59nhlij",
+      "epic_key": "ONP-1346",
+      "date": "2026-10-08",
+      "author": "Norbert Wójcicki",
+      "text": "Decomposed and ready for development, but it is priority #10 from Matthew — Gustavo is currently decomposing Public API / Tenant API Keys (priority #2); deliberately not starting to avoid context switching.",
+      "created_at": "2026-10-08T11:32:10.274Z",
+      "updated_at": "2026-10-08T11:34:53.345Z"
+    },
+    {
+      "id": "sst6ww8f",
+      "epic_key": "ONP-175",
+      "date": "2026-10-08",
+      "author": "Anton Bondarenko",
+      "text": "Development done; in QA, not released yet. No blockers. SaaS asset details page widget is ready for QA, BCDR part still ongoing. Release planned next Thursday (Oct 15).",
+      "created_at": "2026-10-08T11:34:53.304Z",
+      "updated_at": null
+    },
+    {
+      "id": "sw0wdsbe",
+      "epic_key": "ONP-212",
+      "date": "2026-10-08",
+      "author": "Ekaterina Pavlovskaya",
+      "text": "Everything in the epic is released except 2 tickets: API done, UI not yet. Target is release next week, but full testing may not fit.",
+      "created_at": "2026-10-08T11:34:53.311Z",
+      "updated_at": null
+    },
+    {
+      "id": "ometjyic",
+      "epic_key": "ONP-216",
+      "date": "2026-10-08",
+      "author": "Anton Bondarenko",
+      "text": "Production bug found (North America issue); configuration changed on the OneTrust side today and the issue looks resolved — now testing. No extra release needed; improved UI styles may ship later. RCA expected (requested in the ticket).",
+      "created_at": "2026-10-08T11:34:53.316Z",
+      "updated_at": null
+    },
+    {
+      "id": "qo0b0w4m",
+      "epic_key": "OA-132",
+      "date": "2026-10-08",
+      "author": "Norbert Wójcicki",
+      "text": "Potential blocker: Entra assets cannot be mapped to organizations — the domain-to-organization mapping exists only in UniView, is not exposed to Entra, and no UniView work is scoped to provide it. Epic scope may be incomplete. Kate to verify with the team why it was built this way.",
+      "created_at": "2026-10-08T11:34:53.320Z",
+      "updated_at": null
+    },
+    {
+      "id": "m2c0lbos",
+      "epic_key": "OA-133",
+      "date": "2026-10-08",
+      "author": "Tomasz Mazurek",
+      "text": "Progressing as planned; potential blocker is Tenant Merge.",
+      "created_at": "2026-10-08T11:34:53.324Z",
+      "updated_at": null
+    },
+    {
+      "id": "4t60ks3h",
+      "epic_key": "OA-134",
+      "date": "2026-10-08",
+      "author": "Tomasz Mazurek",
+      "text": "Progressing as planned; potential blocker is Tenant Merge.",
+      "created_at": "2026-10-08T11:34:53.328Z",
+      "updated_at": null
+    },
+    {
+      "id": "8qcrggbw",
+      "epic_key": "OA-217",
+      "date": "2026-10-08",
+      "author": "Norbert Wójcicki",
+      "text": "On hold; now driven by Norbert. Gustavo is first decomposing Tenant API Keys (ONP-1913), then will rewrite the Public API stories from scratch (epic changed hands many times). Includes infrastructure/pipeline work — Kate considering a DevOps-experienced engineer once clean requirements are ready. (Piotr Scibor from AEGIS team)",
+      "created_at": "2026-10-08T11:34:53.331Z",
+      "updated_at": "2026-10-08T11:47:53.425Z"
+    },
+    {
+      "id": "l698bhwv",
+      "epic_key": "ONP-1913",
+      "date": "2026-10-08",
+      "author": "Norbert Wójcicki",
+      "text": "Being decomposed by Gustavo now; Public API (OA-217) follows.",
+      "created_at": "2026-10-08T11:34:53.335Z",
+      "updated_at": null
+    },
+    {
+      "id": "p4rzlxbq",
+      "epic_key": "OA-391",
+      "date": "2026-10-08",
+      "author": "Michał Roztoczyński",
+      "text": "Moved to Q4 / Gate 4 because the team is still on Resolution Center. No blockers, progressing well. SaaS Protection only for now — BCDR is best-effort and may miss the date, so the first release will likely be SaaS-only.",
+      "created_at": "2026-10-08T11:34:53.337Z",
+      "updated_at": null
+    },
+    {
+      "id": "civo46a9",
+      "epic_key": "ONP-1092",
+      "date": "2026-10-08",
+      "author": "Anton",
+      "text": "API (Bartosz) progressing with no blockers; UI in development. First release SaaS Protection only; BCDR best-effort. 80% work is dev complete",
+      "created_at": "2026-10-08T11:34:53.339Z",
+      "updated_at": "2026-10-08T13:13:52.483Z"
+    },
+    {
+      "id": "4xqap09b",
+      "epic_key": "ONP-1364",
+      "date": "2026-10-08",
+      "author": "Norbert",
+      "text": "Dev Work in progress within team + Progress done on risks",
+      "created_at": "2026-10-08T11:34:53.341Z",
+      "updated_at": "2026-10-08T13:12:18.321Z"
+    },
+    {
+      "id": "n2zkoudm",
+      "epic_key": "ONP-175",
+      "date": "2026-10-13",
+      "author": "Tomasz ",
+      "text": "No blockers. Not released yet, planned release in two days (Oct 15). Kate confirmed the plan still holds.",
+      "created_at": "2026-10-13T11:43:52.607Z",
+      "updated_at": null
+    },
+    {
+      "id": "ifay4c32",
+      "epic_key": "ONP-212",
+      "date": "2026-10-13",
+      "author": "Ekaterina",
+      "text": "Scope was slightly increased. Will not be released this week, hoped for next iteration. One of the two tickets is already in progress.",
+      "created_at": "2026-10-13T11:44:34.015Z",
+      "updated_at": "2026-10-13T11:44:47.504Z"
+    },
+    {
+      "id": "83aiq2ac",
+      "epic_key": "ONP-216",
+      "date": "2026-10-13",
+      "author": "Anton",
+      "text": "Fixed with a different approach and working. A proper release on Thu Oct 15 adds the consent-change link, which was unstyled. The epic can be closed after that.",
+      "created_at": "2026-10-13T11:45:20.994Z",
+      "updated_at": null
+    },
+    {
+      "id": "lv61gavf",
+      "epic_key": "OA-132",
+      "date": "2026-10-13",
+      "author": "",
+      "text": "Blocker confirmed: Entra assets cannot be mapped to organizations MEB-637, Entra team is working on that",
+      "created_at": "2026-10-13T11:46:56.296Z",
+      "updated_at": null
+    },
+    {
+      "id": "5osrzxde",
+      "epic_key": "OA-217",
+      "date": "2026-10-13",
+      "author": "Norbert",
+      "text": "In progress, no blockers. Gustavo finished the technical decomposition on the One Portal side and is working on the One API side, with a draft today. Piotr started onboarding yesterday.",
+      "created_at": "2026-10-13T11:49:46.375Z",
+      "updated_at": "2026-10-13T11:50:06.603Z"
+    },
+    {
+      "id": "nfnhg7kt",
+      "epic_key": "OA-391",
+      "date": "2026-10-13",
+      "author": "Ekaterina",
+      "text": "Scope is increasing: Michał R. will add a ticket for a total-open-issues indicator and take it to refinement tomorrow (Oct 14). Apart from that need to be tested and released.",
+      "created_at": "2026-10-13T11:51:31.917Z",
+      "updated_at": null
+    },
+    {
+      "id": "4wia6ft8",
+      "epic_key": "ONP-1092",
+      "date": "2026-10-13",
+      "author": "Anton",
+      "text": "UI part is ready to be tested , we need API to do that end to end , not risk for NOV, ",
+      "created_at": "2026-10-13T11:52:44.356Z",
+      "updated_at": null
+    },
+    {
+      "id": "g20p3xww",
+      "epic_key": "ONP-1913",
+      "date": "2026-10-13",
+      "author": "Gustavo",
+      "text": "Decomposition is done , Epic is ready for dev. ",
+      "created_at": "2026-10-13T11:54:11.968Z",
+      "updated_at": null
+    },
+    {
+      "id": "5z8xt9wx",
+      "epic_key": "ONP-2042",
+      "date": "2026-10-13",
+      "author": "",
+      "text": "UI-only, adding product support to the asset and appliance pages. In progress, designs  ready. Each product needs an asset details page.",
+      "created_at": "2026-10-13T11:56:16.808Z",
+      "updated_at": null
+    },
+    {
+      "id": "2568oa4k",
+      "epic_key": "ONP-2047",
+      "date": "2026-10-13",
+      "author": "",
+      "text": "UI-only, adding product support to the asset and appliance pages. In progress, designs  ready. Each product needs an asset details page.",
+      "created_at": "2026-10-13T11:56:21.324Z",
+      "updated_at": null
+    },
+    {
+      "id": "pdywu5u5",
+      "epic_key": "ONP-2052",
+      "date": "2026-10-13",
+      "author": "",
+      "text": "UI-only, adding product support to the asset and appliance pages. In progress, designs  ready. Each product needs an asset details page.",
+      "created_at": "2026-10-13T11:56:25.844Z",
+      "updated_at": null
+    },
+    {
+      "id": "g371a46m",
+      "epic_key": "ONP-2057",
+      "date": "2026-10-13",
+      "author": "",
+      "text": "UI-only, adding product support to the asset and appliance pages. In progress, designs  ready. Each product needs an asset details page.",
+      "created_at": "2026-10-13T11:56:29.768Z",
+      "updated_at": null
+    },
+    {
+      "id": "2r58dqil",
+      "epic_key": "ONP-2062",
+      "date": "2026-10-13",
+      "author": "",
+      "text": "UI-only, adding product support to the asset and appliance pages. In progress, designs  ready. Each product needs an asset details page.",
+      "created_at": "2026-10-13T11:56:33.535Z",
+      "updated_at": null
+    },
+    {
+      "id": "puwbq6wj",
+      "epic_key": "OA-394",
+      "date": "2026-10-13",
+      "author": "Michal Brewinski",
+      "text": "Porting from Nikita's local version to dev. Most items are resolved, and Figma questions are open with Tatiana. Open topic: how to rebuild indexes for new users and for users whose indexes were cleaned after 60 days of inactivity. This is deferred.",
+      "created_at": "2026-10-13T11:57:06.341Z",
+      "updated_at": null
+    },
+    {
+      "id": "93ypwawg",
+      "epic_key": "ONP-175",
+      "date": "2026-10-15",
+      "author": "Ekaterina",
+      "text": "Releasing Today 10/15",
+      "created_at": "2026-10-15T11:27:56.501Z",
+      "updated_at": null
+    },
+    {
+      "id": "9t80y08n",
+      "epic_key": "ONP-212",
+      "date": "2026-10-15",
+      "author": "Ekaterina",
+      "text": "We have a slight change in requirements , released pushed to 10/29",
+      "created_at": "2026-10-15T11:28:59.399Z",
+      "updated_at": null
+    },
+    {
+      "id": "qzqid1ny",
+      "epic_key": "ONP-216",
+      "date": "2026-10-15",
+      "author": "Anton",
+      "text": "Releasing today no change",
+      "created_at": "2026-10-15T11:29:22.383Z",
+      "updated_at": null
+    },
+    {
+      "id": "st3rocyr",
+      "epic_key": "OA-217",
+      "date": "2026-10-15",
+      "author": "Michal R",
+      "text": "in Progress no risks",
+      "created_at": "2026-10-15T11:34:00.315Z",
+      "updated_at": null
+    },
+    {
+      "id": "j8m5swxq",
+      "epic_key": "OA-391",
+      "date": "2026-10-15",
+      "author": "Michal R",
+      "text": " Scope increased as missed items were added. Design deviations to be applied. No Risk ",
+      "created_at": "2026-10-15T11:35:04.953Z",
+      "updated_at": null
+    },
+    {
+      "id": "t6771l78",
+      "epic_key": "ONP-1913",
+      "date": "2026-10-15",
+      "author": "Norbert",
+      "text": "Decomposition complete. Discovery with the team next, not yet confirmed ready for development.",
+      "created_at": "2026-10-15T11:38:38.426Z",
+      "updated_at": null
+    },
+    {
+      "id": "9ac8d4x2",
+      "epic_key": "ONP-898",
+      "date": "2026-10-15",
+      "author": "Anton",
+      "text": "This epic should be split as we already can log in using K1 , reminder of config work is for Gate 5",
+      "created_at": "2026-10-15T11:40:11.385Z",
+      "updated_at": null
+    },
+    {
+      "id": "c56kgpg9",
+      "epic_key": "ONP-1346",
+      "date": "2026-10-15",
+      "author": "Norbert",
+      "text": "Collecting dependency ticket for K1 team to work on, need a follow up with them and ask to plan ahead.",
+      "created_at": "2026-10-15T11:41:00.012Z",
+      "updated_at": null
+    },
+    {
+      "id": "ipkhwa0r",
+      "epic_key": "ONP-212",
+      "date": "2026-10-20",
+      "author": "Ekaterina",
+      "text": "On track, no risks",
+      "created_at": "2026-10-20T11:59:00.286Z",
+      "updated_at": null
+    },
+    {
+      "id": "w7c6gwgv",
+      "epic_key": "OA-134",
+      "date": "2026-10-20",
+      "author": "Michal",
+      "text": "Issue uncovered with missing failed-backup events, Product discussion in progress.  EB2 Pms contacted. ",
+      "created_at": "2026-10-20T12:01:45.622Z",
+      "updated_at": "2026-10-20T13:22:16.141Z"
+    },
+    {
+      "id": "b2kbsple",
+      "epic_key": "OA-217",
+      "date": "2026-10-20",
+      "author": "Michal",
+      "text": "On track. Piotr is not blocked, and the infrastructure ticket is in progress. ",
+      "created_at": "2026-10-20T12:02:13.806Z",
+      "updated_at": null
+    },
+    {
+      "id": "vv1oy9jp",
+      "epic_key": "OA-391",
+      "date": "2026-10-20",
+      "author": "Michal",
+      "text": "Designs and data structure are aligned. ISSUE: The error code list from SaaS Protection has gaps. Some codes are missing, duplicated, or mapped to the wrong message.. Weronika's decision on the error list is pending. Weronika: To have it worked out 10/21",
+      "created_at": "2026-10-20T12:03:12.440Z",
+      "updated_at": "2026-10-20T13:16:41.658Z"
+    },
+    {
+      "id": "4ewm679k",
+      "epic_key": "ONP-1092",
+      "date": "2026-10-20",
+      "author": "Anton",
+      "text": "ISSUE: The error code list from SaaS Protection has gaps. Some codes are missing, duplicated, or mapped to the wrong message.The portal side waits on the API. Weronika's decision on the error list is pending.",
+      "created_at": "2026-10-20T12:03:51.909Z",
+      "updated_at": "2026-10-20T12:09:48.248Z"
+    },
+    {
+      "id": "ztna5xjk",
+      "epic_key": "ONP-217",
+      "date": "2026-10-20",
+      "author": "Norbert",
+      "text": "Code complete and tested, but it can't be enabled until auto provisioning exists. It doesn't block merge, which supports existing DPP only for now.",
+      "created_at": "2026-10-20T12:04:58.526Z",
+      "updated_at": "2026-10-20T12:05:40.218Z"
+    },
+    {
+      "id": "hsrnycag",
+      "epic_key": "ONP-1364",
+      "date": "2026-10-20",
+      "author": "Norbert",
+      "text": "Progressing. Alexander has three stories: \"cost\", \"air\" on the Uniview side, and hiding broken appliances.",
+      "created_at": "2026-10-20T12:06:43.686Z",
+      "updated_at": null
+    },
+    {
+      "id": "g30shkkw",
+      "epic_key": "ONP-1913",
+      "date": "2026-10-20",
+      "author": "Gustavo",
+      "text": "Refinement hasn't happened. Gustavo is setting it up tomorrow, then tickets get picked up.",
+      "created_at": "2026-10-20T12:13:29.668Z",
+      "updated_at": null
+    },
+    {
+      "id": "26j7memb",
+      "epic_key": "ONP-2042",
+      "date": "2026-10-20",
+      "author": "Ekaterina",
+      "text": "Initial release starts next week.",
+      "created_at": "2026-10-20T12:14:12.354Z",
+      "updated_at": null
+    },
+    {
+      "id": "y2cw36fk",
+      "epic_key": "ONP-2047",
+      "date": "2026-10-20",
+      "author": "Ekaterina",
+      "text": "Initial release starts next week.",
+      "created_at": "2026-10-20T12:14:27.798Z",
+      "updated_at": null
+    },
+    {
+      "id": "6h77mw30",
+      "epic_key": "ONP-2052",
+      "date": "2026-10-20",
+      "author": "Anton",
+      "text": "Tied to the API. Designs are being worked on today.",
+      "created_at": "2026-10-20T12:14:50.014Z",
+      "updated_at": null
+    },
+    {
+      "id": "xd6bcm2v",
+      "epic_key": "ONP-2057",
+      "date": "2026-10-20",
+      "author": "Anton",
+      "text": "Designs exist. They'll be reviewed this week, including what's missing on the One API side.",
+      "created_at": "2026-10-20T12:15:15.095Z",
+      "updated_at": null
+    },
+    {
+      "id": "bgxn13iv",
+      "epic_key": "ONP-2062",
+      "date": "2026-10-20",
+      "author": "Anton",
+      "text": "Designs exist. They'll be reviewed this week, including what's missing on the One API side.",
+      "created_at": "2026-10-20T12:15:37.496Z",
+      "updated_at": null
+    },
+    {
+      "id": "qrx3xmmy",
+      "epic_key": "ONP-2177",
+      "date": "2026-10-20",
+      "author": "Ekterina",
+      "text": "In Development",
+      "created_at": "2026-10-20T12:16:01.466Z",
+      "updated_at": null
+    }
+  ],
+  "risks": [
+    {
+      "id": "i9gxcs0k",
+      "epic_key": "ONP-1364",
+      "title": "Key-person dependency — Michał B. leaving",
+      "description": "Michał B. is leaving the company and ownership of the KOS/Azure workstream is not yet formally reassigned.",
+      "mitigation": "Michał R. to take over the workstream.",
+      "severity": "Low",
+      "owner": "Tomasz Mazurek",
+      "status": "closed",
+      "created_at": "2026-10-06T11:01:19.942Z",
+      "updated_at": "2026-10-13T11:57:34.847Z",
+      "closed_at": "2026-10-13T11:57:34.847Z"
+    },
+    {
+      "id": "7wbqi2cx",
+      "epic_key": "ONP-1364",
+      "title": "Azure/KOS dependency — KOS organization remapping",
+      "description": "KOS organization remapping is required to move assets from UV C2 to DPP C2; will soon impact EIR as well.",
+      "mitigation": "Obtain required detail from the KOS and Azure teams; Alex presented an implementation proposal for team review.",
+      "severity": "Low",
+      "owner": "Michal Brewinski",
+      "status": "open",
+      "created_at": "2026-10-06T10:59:56.107Z",
+      "updated_at": "2026-10-20T12:08:05.990Z",
+      "closed_at": null
+    },
+    {
+      "id": "7np8d4hv",
+      "epic_key": "ONP-1364",
+      "title": "EIR deployment-token reassignment blocks Tenant Merge",
+      "description": "EIR cannot reassign deployment tokens when organizations are moved, blocking Tenant Merge. Tracked as ONP-1900.",
+      "mitigation": "EIR team engaged — Brian added ONP-1900 to the current sprint (Oct 7) and development has started.",
+      "severity": "Low",
+      "owner": "Norbert Wojcicki",
+      "status": "open",
+      "created_at": "2026-10-06T10:56:34.864Z",
+      "updated_at": "2026-10-15T11:36:06.799Z",
+      "closed_at": null
+    },
+    {
+      "id": "bnmgmnc4",
+      "epic_key": "OA-132",
+      "title": "Dependency on UV Migration (Tenant Merge)",
+      "description": "Delivery is blocked by UV Migration / Tenant Merge progress.",
+      "mitigation": "Acceleration plan already agreed with the Hammer team.",
+      "severity": "Medium",
+      "owner": "Michal Roztoczynski",
+      "status": "open",
+      "created_at": "2026-10-06T11:16:02.918Z",
+      "updated_at": "2026-10-20T12:11:13.527Z",
+      "closed_at": null
+    },
+    {
+      "id": "9l4z4z4y",
+      "epic_key": "OA-133",
+      "title": "Dependency on UV Migration (Tenant Merge)",
+      "description": "Delivery is blocked by UV Migration / Tenant Merge progress.",
+      "mitigation": "Acceleration plan already agreed with the Hammer team.",
+      "severity": "Medium",
+      "owner": "Michal Roztoczynski",
+      "status": "open",
+      "created_at": "2026-10-06T11:39:16.926Z",
+      "updated_at": "2026-10-20T12:11:49.953Z",
+      "closed_at": null
+    },
+    {
+      "id": "mxcp6och",
+      "epic_key": "OA-134",
+      "title": "Dependency on UV Migration (Tenant Merge)",
+      "description": "Delivery is blocked by UV Migration / Tenant Merge progress.",
+      "mitigation": "Acceleration plan already agreed with the Hammer team.",
+      "severity": "Medium",
+      "owner": "Michal Roztoczynski",
+      "status": "open",
+      "created_at": "2026-10-06T11:39:41.301Z",
+      "updated_at": "2026-10-20T12:11:57.751Z",
+      "closed_at": null
+    },
+    {
+      "id": "kzdhsl49",
+      "epic_key": "OA-132",
+      "title": "Entra assets cannot be mapped to organizations",
+      "description": "the domain-to-organization mapping exists only in UniView, is not exposed to Entra, and no UniView work is scoped to provide it",
+      "mitigation": "Work with Alex Hrel to scope and define work for entra",
+      "severity": "High",
+      "owner": "Ekaterina",
+      "status": "open",
+      "created_at": "2026-10-13T11:48:14.552Z",
+      "updated_at": "2026-10-20T13:09:34.585Z",
+      "closed_at": null
+    },
+    {
+      "id": "7315qd0v",
+      "epic_key": "OA-134",
+      "title": "Missing failed-backup events",
+      "description": "missing failed-backup events, Product discussion in progress.  EB2 Pms contacted.",
+      "mitigation": "",
+      "severity": "Medium",
+      "owner": "",
+      "status": "open",
+      "created_at": "2026-10-20T13:15:21.134Z",
+      "updated_at": "2026-10-20T13:22:22.731Z",
+      "closed_at": null
+    }
+  ],
+  "risk_updates": [
+    {
+      "id": "ljgny0xe",
+      "risk_id": "7wbqi2cx",
+      "date": "2026-10-07",
+      "text": "Alex presented list of KOS propsal to implement , to be reviewed by team Meeting with KOS setup for 10/07",
+      "author": null,
+      "created_at": "2026-10-07T09:13:01.374Z",
+      "updated_at": null
+    },
+    {
+      "id": "zu0b7eag",
+      "risk_id": "7np8d4hv",
+      "date": "2026-10-07",
+      "text": "Brian added ticket to the current sprint would start ASAP. using same jira ticket",
+      "author": null,
+      "created_at": "2026-10-07T09:13:21.065Z",
+      "updated_at": null
+    },
+    {
+      "id": "czboon7s",
+      "risk_id": "7np8d4hv",
+      "date": "2026-10-07",
+      "text": "EIR development underway.",
+      "author": null,
+      "created_at": "2026-10-07T13:32:43.387Z",
+      "updated_at": "2026-10-07T13:52:05.294Z"
+    },
+    {
+      "id": "be7tiywu",
+      "risk_id": "7np8d4hv",
+      "date": "2026-10-08",
+      "text": "EIR work is in progress, Risk stays open until delivered.",
+      "author": null,
+      "created_at": "2026-10-08T11:34:53.347Z",
+      "updated_at": "2026-10-08T11:40:22.240Z"
+    },
+    {
+      "id": "y1y0rote",
+      "risk_id": "7wbqi2cx",
+      "date": "2026-10-08",
+      "text": "Organization-change notifications: agreement reached with KOS team — we trigger the change and ping KOS, KOS notifies other products; Development is ongoing",
+      "author": null,
+      "created_at": "2026-10-08T11:42:34.728Z",
+      "updated_at": "2026-10-08T11:44:28.518Z"
+    },
+    {
+      "id": "n9xo9863",
+      "risk_id": "i9gxcs0k",
+      "date": "2026-10-08",
+      "text": "Michal R onboarding himself to take over next week",
+      "author": null,
+      "created_at": "2026-10-08T11:45:06.968Z",
+      "updated_at": null
+    },
+    {
+      "id": "ut1yzc51",
+      "risk_id": "7wbqi2cx",
+      "date": "2026-10-13",
+      "text": "The new finding is that KOS now says a move means creating a new org and a new policy in the target org, but there is no API to create policies. This contradicts what they said earlier and is a circular dependency. There is no Jira ticket and no delivery date, only meetings. Michał B. will ask Eric today at 5pm. Norbert's biggest fear is that KOS doesn't finish by mid-November.",
+      "author": null,
+      "created_at": "2026-10-13T11:58:41.423Z",
+      "updated_at": null
+    },
+    {
+      "id": "dgl11gpe",
+      "risk_id": "7np8d4hv",
+      "date": "2026-10-13",
+      "text": "Code review is nearly done. It's assigned to fix version 115.5, but there is no release date. Bryan Goldston says the date will be known within a few days.",
+      "author": null,
+      "created_at": "2026-10-13T11:59:17.225Z",
+      "updated_at": "2026-10-13T11:59:41.782Z"
+    },
+    {
+      "id": "pvyysdai",
+      "risk_id": "7wbqi2cx",
+      "date": "2026-10-13",
+      "text": "Once API is there from KOS , one team needs additional one sprint to integrate",
+      "author": null,
+      "created_at": "2026-10-13T13:07:20.047Z",
+      "updated_at": null
+    },
+    {
+      "id": "0ixv8x81",
+      "risk_id": "kzdhsl49",
+      "date": "2026-10-13",
+      "text": "According to A. Hrel this already is in progress , more info when can be release on next sync oct 20",
+      "author": null,
+      "created_at": "2026-10-13T16:06:52.745Z",
+      "updated_at": null
+    },
+    {
+      "id": "rrssr3s1",
+      "risk_id": "7np8d4hv",
+      "date": "2026-10-13",
+      "text": "PEr Bryan G: Release: targeting the 26-27th, but that date may move sooner.",
+      "author": null,
+      "created_at": "2026-10-13T16:07:12.436Z",
+      "updated_at": "2026-10-14T08:11:55.264Z"
+    },
+    {
+      "id": "ucx6jzx7",
+      "risk_id": "7wbqi2cx",
+      "date": "2026-10-14",
+      "text": "KOS team in agreement , promised to implement additional api for creating policies, should be available OCT 19th , provided jiras to track , SPFG-1080, SPFG-1006, SPFG-961, SPFG-517",
+      "author": null,
+      "created_at": "2026-10-14T08:11:23.316Z",
+      "updated_at": null
+    },
+    {
+      "id": "7aalk0uu",
+      "risk_id": "kzdhsl49",
+      "date": "2026-10-15",
+      "text": "DEvelopment Complete on Entra ID , their bottle neck is now QA , they are queuing this up. More info on next sync 10/20",
+      "author": null,
+      "created_at": "2026-10-15T11:32:48.589Z",
+      "updated_at": null
+    },
+    {
+      "id": "x8zxnmln",
+      "risk_id": "7np8d4hv",
+      "date": "2026-10-15",
+      "text": "The endpoint backup (EIR) code is merged and moved to Ready for QA. Bryan's preliminary release date is 26-27 Oct. Norbert said the release date is fine, since what matters is staging availability before the merge, and \"we are good on this\"",
+      "author": null,
+      "created_at": "2026-10-15T11:36:33.546Z",
+      "updated_at": null
+    },
+    {
+      "id": "sqg7olan",
+      "risk_id": "7wbqi2cx",
+      "date": "2026-10-15",
+      "text": " KOS API expected early next week, possibly Mon 19 Oct or early next week",
+      "author": null,
+      "created_at": "2026-10-15T11:37:32.063Z",
+      "updated_at": null
+    },
+    {
+      "id": "gj1e2u4u",
+      "risk_id": "kzdhsl49",
+      "date": "2026-10-20",
+      "text": "Development is complete and the item is waiting on QA. A. Hrel to confirm",
+      "author": null,
+      "created_at": "2026-10-20T11:59:50.862Z",
+      "updated_at": null
+    },
+    {
+      "id": "5jl5698i",
+      "risk_id": "7wbqi2cx",
+      "date": "2026-10-20",
+      "text": "KOS unblocked us: Alexander is coding the Uniview side, and the partner API part is done. ",
+      "author": null,
+      "created_at": "2026-10-20T12:07:45.635Z",
+      "updated_at": null
+    },
+    {
+      "id": "9zo8epq6",
+      "risk_id": "7315qd0v",
+      "date": "2026-10-20",
+      "text": "Bjorn contacted on this , his eng team is working on that., need EIR team jira for this",
+      "author": null,
+      "created_at": "2026-10-20T14:15:06.704Z",
+      "updated_at": null
+    },
+    {
+      "id": "kvr7d21k",
+      "risk_id": "kzdhsl49",
+      "date": "2026-10-20",
+      "text": "Tom B to pull 1 more QA from saas p to expedite this. Expect update 10/22",
+      "author": null,
+      "created_at": "2026-10-20T14:15:58.572Z",
+      "updated_at": null
+    }
+  ]
+}
