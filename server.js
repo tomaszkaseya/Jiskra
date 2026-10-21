@@ -299,17 +299,59 @@ function sendJson(res, code, obj) {
   res.end(body);
 }
 
-function readBody(req) {
+function readBody(req, limit = 1e6) {
   return new Promise((resolve, reject) => {
     let data = "";
     req.on("data", (c) => {
       data += c;
-      if (data.length > 1e6) reject(new Error("body too large"));
+      if (data.length > limit) reject(new Error("body too large"));
     });
     req.on("end", () => {
       try { resolve(data ? JSON.parse(data) : {}); } catch (e) { reject(e); }
     });
   });
+}
+
+// Portable export/import of the local data (everything except users and Jira config).
+const EXPORT_TABLES = {
+  tabs: ["id", "name", "description", "labels", "position"],
+  statuses: ["id", "epic_key", "date", "author", "text", "created_at", "updated_at"],
+  risks: ["id", "epic_key", "title", "description", "mitigation", "severity", "owner", "status", "created_at", "updated_at", "closed_at"],
+  risk_updates: ["id", "risk_id", "date", "text", "author", "created_at", "updated_at"],
+};
+
+function exportData() {
+  const out = { app: "jiskra", version: 1, exportedAt: new Date().toISOString() };
+  for (const [t, cols] of Object.entries(EXPORT_TABLES)) {
+    out[t] = db.prepare(`SELECT ${cols.join(",")} FROM ${t}`).all();
+  }
+  return out;
+}
+
+// Merge an export into the database: rows are upserted by id, nothing is deleted.
+function importData(body) {
+  if (!body || body.app !== "jiskra") throw new Error("not a Jiskra export file");
+  const counts = {};
+  db.exec("BEGIN");
+  try {
+    for (const [t, cols] of Object.entries(EXPORT_TABLES)) {
+      const rows = body[t] || [];
+      if (!Array.isArray(rows)) throw new Error(`"${t}" must be an array`);
+      const stmt = db.prepare(
+        `INSERT INTO ${t} (${cols.join(",")}) VALUES (${cols.map(() => "?").join(",")})
+         ON CONFLICT(id) DO UPDATE SET ${cols.slice(1).map((c) => `${c}=excluded.${c}`).join(",")}`);
+      for (const r of rows) {
+        if (!r || typeof r.id !== "string" || !r.id) throw new Error(`"${t}" row without id`);
+        stmt.run(...cols.map((c) => (r[c] == null ? null : typeof r[c] === "number" ? r[c] : String(r[c]))));
+      }
+      counts[t] = rows.length;
+    }
+    db.exec("COMMIT");
+  } catch (e) {
+    db.exec("ROLLBACK");
+    throw e;
+  }
+  return counts;
 }
 
 // Build "SET col = ?, ..." from the allowed subset of a request body.
@@ -382,6 +424,16 @@ const server = http.createServer(async (req, res) => {
     // --- API ---
     if (url.pathname === "/api/config" && req.method === "GET") {
       return sendJson(res, 200, { tabs: listTabs(), projects: CONFIG.projects, jiraBase: CONFIG.jira.baseUrl });
+    }
+    if (url.pathname === "/api/export" && req.method === "GET") {
+      return sendJson(res, 200, exportData());
+    }
+    if (url.pathname === "/api/import" && req.method === "POST") {
+      try {
+        return sendJson(res, 200, { imported: importData(await readBody(req, 100e6)) });
+      } catch (e) {
+        return sendJson(res, 400, { error: e.message });
+      }
     }
     if (url.pathname === "/api/tabs" && req.method === "PUT") {
       const parsed = parseTabs(await readBody(req));

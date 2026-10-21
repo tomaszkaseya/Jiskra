@@ -217,13 +217,51 @@ function renderSettings(){
       <button class="${SETTINGS_SECTION==="users"?"active":""}" data-section="users">Users</button>
       <button disabled title="Coming soon">Jira connection</button>
       <button class="${SETTINGS_SECTION==="tabs"?"active":""}" data-section="tabs">Gates &amp; projects</button>
+      <button class="${SETTINGS_SECTION==="data"?"active":""}" data-section="data">Import / export</button>
     </nav>
     <div class="spanel" id="spanel"></div>
   </div>`;
   $("#content").querySelectorAll("[data-section]").forEach(b => b.onclick = () => {
     SETTINGS_SECTION = b.dataset.section; TAB_DRAFT = null; renderSettings();
   });
-  if(SETTINGS_SECTION === "tabs") renderTabsSection(); else renderUsersSection();
+  if(SETTINGS_SECTION === "tabs") renderTabsSection();
+  else if(SETTINGS_SECTION === "data") renderDataSection();
+  else renderUsersSection();
+}
+
+// --- settings: import / export (move data between workstations) ---
+function renderDataSection(){
+  $("#spanel").innerHTML = `<h2>Import / export</h2>
+    <p class="hint">Exports tabs, daily statuses, risks and risk updates to a JSON file. Users and Jira credentials are not included.
+      Importing merges: records with the same id are overwritten, nothing is deleted.</p>
+    <p><button class="primary" id="exportBtn">Export data</button></p>
+    <h2 style="margin-top:6px;font-size:14px">Import</h2>
+    <p><input type="file" id="importFile" accept=".json,application/json"></p>
+    <div class="msg" id="dataMsg"></div>`;
+  const msg = t => { if($("#dataMsg")) $("#dataMsg").textContent = t; };
+  $("#exportBtn").onclick = async () => {
+    try{
+      const d = await api("/api/export");
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(new Blob([JSON.stringify(d, null, 2)], {type:"application/json"}));
+      a.download = `jiskra-export-${new Date().toISOString().slice(0,10)}.json`;
+      a.click();
+      URL.revokeObjectURL(a.href);
+      msg(`Exported ${d.statuses.length} statuses, ${d.risks.length} risks, ${d.risk_updates.length} risk updates, ${d.tabs.length} tabs.`);
+    }catch(e){ msg(e.message); }
+  };
+  $("#importFile").onchange = async ev => {
+    const f = ev.target.files[0];
+    if(!f) return;
+    try{
+      const body = await f.text();
+      JSON.parse(body);
+      const r = await api("/api/import", {method:"POST", headers:{"Content-Type":"application/json"}, body});
+      const c = r.imported;
+      msg(`Imported ${c.statuses} statuses, ${c.risks} risks, ${c.risk_updates} risk updates, ${c.tabs} tabs. Reloading…`);
+      setTimeout(() => location.reload(), 1200);
+    }catch(e){ msg("Import failed: " + e.message); }
+  };
 }
 
 // --- settings: tabs (one page per set of Jira labels) ---
