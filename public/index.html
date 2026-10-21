@@ -100,7 +100,23 @@ table.matrix{width:100%;border-collapse:collapse;background:var(--card);border:1
 .pbar .num{font-size:12px;color:var(--muted);white-space:nowrap;font-variant-numeric:tabular-nums}
 .matrix tfoot td{font-weight:600;background:var(--gray-soft)}
 body[data-page=settings] .tabs, body[data-page=settings] .toolbar > :not(#settingsBtn){display:none}
-#settingsBtn.active{background:var(--accent);border-color:var(--accent);color:#fff}
+body[data-page=reports] .tabs, body[data-page=reports] .toolbar > :not(#settingsBtn):not(#report){display:none}
+#settingsBtn.active, #report.active{background:var(--accent);border-color:var(--accent);color:#fff}
+.rpage{display:flex;flex-direction:column;gap:18px}
+.rform{display:flex;gap:12px;align-items:end;flex-wrap:wrap}
+.rform label{display:grid;gap:4px;font-size:13px;color:var(--muted)}
+table.rlist{width:100%;border-collapse:collapse}
+.rlist th,.rlist td{border-bottom:1px solid var(--border);padding:8px 10px;text-align:left;vertical-align:top}
+.rlist th{font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:var(--muted)}
+.rlist tr.sel{background:var(--accent-soft)}
+.rlist td.actions{white-space:nowrap;text-align:right}
+.rlist td.actions button{margin-left:6px}
+.rlist .headline{max-width:520px}
+.rview{background:var(--card);border:1px solid var(--border);border-radius:10px;overflow:hidden}
+.rview-bar{display:flex;gap:10px;align-items:center;padding:10px 14px;border-bottom:1px solid var(--border);flex-wrap:wrap}
+.rview-bar .spacer{margin-left:auto}
+.rview iframe{display:block;width:100%;height:80vh;min-height:560px;border:0;background:#fff}
+@media (prefers-color-scheme: dark){.rview iframe{background:#0f151b}}
 .settings{display:grid;grid-template-columns:200px 1fr;gap:24px;align-items:start}
 @media (max-width:700px){.settings{grid-template-columns:1fr}}
 .snav{background:var(--card);border:1px solid var(--border);border-radius:10px;overflow:hidden}
@@ -146,7 +162,7 @@ form.adduser{display:grid;grid-template-columns:1fr 1fr auto;gap:8px;align-items
       <option value="">All epics</option>
       <option value="open-risks">With open risks</option>
     </select>
-    <button class="ghost" id="report">⬇ Report</button>
+    <button class="ghost" id="report">Reports</button>
     <button class="ghost" id="refresh">↻ Refresh</button>
     <button class="ghost" id="settingsBtn" title="Settings">⚙</button>
   </div>
@@ -165,6 +181,7 @@ form.adduser{display:grid;grid-template-columns:1fr 1fr auto;gap:8px;align-items
   </form>
 </div>
 
+<script src="reports.js"></script>
 <script>
 let CFG = null, TAB = null, EPICS = [], OPEN = new Set(), PAGE = "board";
 let TAB_DRAFT = null; // working copy of CFG.tabs while the Gates & projects editor is open
@@ -192,15 +209,21 @@ async function api(path, opts = {}){
 }
 
 // --- pages ---
+const pageFromHash = () => ({"#settings":"settings", "#reports":"reports"}[location.hash] || "board");
+
 function setPage(page, fromHash){
   PAGE = page;
   document.body.dataset.page = page;
   $("#settingsBtn").classList.toggle("active", page === "settings");
-  if(!fromHash) location.hash = page === "settings" ? "#settings" : "";
+  $("#report").classList.toggle("active", page === "reports");
+  if(!fromHash) location.hash = page === "board" ? "" : "#" + page;
   if(page === "settings"){
     TAB_DRAFT = null;
     $("#summary").textContent = "Settings";
     renderSettings();
+  }else if(page === "reports"){
+    $("#summary").textContent = "Reports";
+    renderReports();
   }else{
     load();
   }
@@ -445,10 +468,10 @@ async function init(){
   renderTabs();
   renderViewToggle();
   $("#refresh").onclick = load;
-  $("#report").onclick = downloadReport;
+  $("#report").onclick = () => setPage(PAGE === "reports" ? "board" : "reports");
   $("#settingsBtn").onclick = () => setPage(PAGE === "settings" ? "board" : "settings");
-  window.onhashchange = () => setPage(location.hash === "#settings" ? "settings" : "board", true);
-  if(location.hash === "#settings") { setPage("settings", true); return; }
+  window.onhashchange = () => setPage(pageFromHash(), true);
+  if(pageFromHash() !== "board") { setPage(pageFromHash(), true); return; }
   $("#quarterFilter").onchange = render;
   $("#riskFilter").onchange = render;
   await load();
@@ -787,115 +810,6 @@ function bindEvents(){
       body:JSON.stringify({status: risk.status==="open" ? "closed" : "open"})});
     await reloadLocal(key);
   });
-}
-
-// --- Executive report: one standalone HTML file covering all tabs ---
-async function downloadReport(){
-  if(!CFG.tabs.length) return;
-  const btn = $("#report");
-  btn.disabled = true; btn.textContent = "⏳ Report…";
-  try{
-    const sections = [];
-    for(const t of CFG.tabs){
-      const d = await api("/api/epics?tab="+encodeURIComponent(t.id));
-      sections.push({ tab: t, list: d.epics });
-    }
-    const html = reportHtml(sections);
-    const a = document.createElement("a");
-    a.href = URL.createObjectURL(new Blob([html], {type:"text/html"}));
-    a.download = `jiskra-report-${today()}.html`;
-    a.click();
-    URL.revokeObjectURL(a.href);
-  }finally{
-    btn.disabled = false; btn.textContent = "⬇ Report";
-  }
-}
-
-const ragColor = r => !r ? "#9aa3ad" : /green/i.test(r) ? "#22a858" : /amber|yellow/i.test(r) ? "#eab308" : /red/i.test(r) ? "#dc2626" : "#9aa3ad";
-
-function gateSectionHtml(tab, list){
-  const gdesc = tab.description || "";
-  const agg = list.reduce((a,e)=>({done:a.done+e.progress.done,total:a.total+e.progress.total}),{done:0,total:0});
-  const pct = agg.total ? Math.round(100*agg.done/agg.total) : 0;
-  const allOpen = list.flatMap(e => openRisks(e).map(r => ({epic:e, risk:r})));
-  const sevRank = {High:0, Medium:1, Low:2};
-  allOpen.sort((a,b)=>(sevRank[a.risk.severity]??3)-(sevRank[b.risk.severity]??3));
-  const sevCount = s => allOpen.filter(x=>x.risk.severity===s).length;
-
-  const rows = list.map(e => {
-    const p = e.progress.total ? Math.round(100*e.progress.done/e.progress.total) : null;
-    const last = e.statuses[0];
-    return `<tr>
-      <td><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${ragColor(e.rag)};margin-right:6px"></span>
-          <a href="${esc(e.url)}">${e.key}</a> ${esc(e.summary)}</td>
-      <td>${esc(e.targetQuarter||"—")}</td>
-      <td>${esc(e.status)}</td>
-      <td style="text-align:right">${p===null?"—":p+"% ("+e.progress.done+"/"+e.progress.total+")"}</td>
-      <td style="text-align:center">${openRisks(e).length||"—"}</td>
-      <td>${last?esc(last.date)+": "+esc(last.text):"—"}</td>
-    </tr>`;
-  }).join("");
-
-  const riskRows = allOpen.map(({epic,risk}) => {
-    const lastUpd = (risk.updates||[])[0];
-    const sevColor = risk.severity==="High"?"#dc2626":risk.severity==="Medium"?"#b45309":"#15803d";
-    return `<tr>
-      <td style="color:${sevColor};font-weight:700">${esc(risk.severity)}</td>
-      <td><a href="${esc(epic.url)}">${epic.key}</a></td>
-      <td><strong>${esc(risk.title)}</strong>${risk.description?"<br>"+esc(risk.description):""}</td>
-      <td>${esc(risk.mitigation||"—")}</td>
-      <td>${esc(risk.owner||"—")}</td>
-      <td>${lastUpd?esc(lastUpd.date)+": "+esc(lastUpd.text):"—"}</td>
-    </tr>`;
-  }).join("");
-
-  return `<section class="gate">
-<h1>${esc(tab.name)}</h1>
-<div class="sub">${esc(gdesc)}</div>
-<div class="kpis">
-  <div class="kpi"><div class="n">${list.length}</div><div class="l">Epics</div></div>
-  <div class="kpi"><div class="n">${pct}%</div><div class="l">Issues done (${agg.done}/${agg.total})</div></div>
-  <div class="kpi"><div class="n" style="color:#dc2626">${sevCount("High")}</div><div class="l">High risks open</div></div>
-  <div class="kpi"><div class="n" style="color:#b45309">${sevCount("Medium")}</div><div class="l">Medium risks open</div></div>
-  <div class="kpi"><div class="n" style="color:#15803d">${sevCount("Low")}</div><div class="l">Low risks open</div></div>
-</div>
-<h2>Epics</h2>
-<table><thead><tr><th>Epic (RAG)</th><th>Quarter</th><th>Jira status</th><th>Progress</th><th>Open risks</th><th>Latest status note</th></tr></thead>
-<tbody>${rows}</tbody></table>
-${allOpen.length ? `<h2>Open risks</h2>
-<table><thead><tr><th>Severity</th><th>Epic</th><th>Risk</th><th>Mitigation plan</th><th>Owner</th><th>Latest update</th></tr></thead>
-<tbody>${riskRows}</tbody></table>` : "<h2>Open risks</h2><p>No open risks. 🎉</p>"}
-</section>`;
-}
-
-function reportHtml(sections){
-  const date = today();
-  return `<!doctype html><html lang="en"><head><meta charset="utf-8">
-<title>Delivery Report — ${date}</title>
-<style>
-body{font:14px/1.5 "Segoe UI",system-ui,sans-serif;color:#1b2430;max-width:960px;margin:32px auto;padding:0 20px}
-h1{font-size:20px;margin:0 0 2px} h2{font-size:15px;margin-top:22px;border-bottom:2px solid #dde2e8;padding-bottom:4px}
-.head h1{font-size:24px}
-.sub{color:#6b7684;margin-bottom:14px}
-.kpis{display:flex;gap:14px;flex-wrap:wrap;margin:14px 0}
-.kpi{border:1px solid #dde2e8;border-radius:10px;padding:12px 18px;min-width:120px}
-.kpi .n{font-size:24px;font-weight:700} .kpi .l{font-size:12px;color:#6b7684}
-table{width:100%;border-collapse:collapse;font-size:13px}
-th,td{border-bottom:1px solid #dde2e8;padding:7px 9px;text-align:left;vertical-align:top}
-th{font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:#6b7684}
-a{color:#2563eb;text-decoration:none}
-section.gate{margin-top:36px;padding-top:18px;border-top:4px solid #2563eb}
-section.gate:first-of-type{margin-top:8px}
-.footer{margin-top:28px;color:#6b7684;font-size:12px}
-@media print{body{margin:0} section.gate{break-before:page} section.gate:first-of-type{break-before:auto}}
-</style></head><body>
-<div class="head">
-  <h1>Delivery Report — ${sections.map(s=>esc(s.tab.name)).join(", ")}</h1>
-  <div class="sub">Generated ${date} · Projects: ${CFG.projects.map(esc).join(", ")}</div>
-</div>
-${sections.map(s => gateSectionHtml(s.tab, s.list)).join("")}
-<div class="footer">Generated by Jiskra · data from ${esc(CFG.jiraBase)} + local risk register</div>
-</body></html>`;
 }
 
 // Refresh one epic's local data without re-hitting Jira for the whole gate.

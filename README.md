@@ -30,6 +30,26 @@ variables, persistent volume, auth setup.
   Nothing is written back to Jira. Legacy `data/db.json` / `data/users.json` files are
   migrated automatically on first start.
 
+## Executive report (PMO)
+
+**Reports** (header button) generates a one-page delivery report for the PMO: bottom line, what needs
+attention, a gate scorecard, what changed since the previous report, open risks, and the status and
+health of every epic. Every report is saved in the history on the same page, so you can reopen,
+download or delete earlier ones.
+
+Who writes the narrative:
+
+- **In the app:** set `ANTHROPIC_API_KEY` (or `anthropic.apiKey` in `config.json`); the Generate button then
+  asks Claude to write it (model `claude-opus-5-5`, about a minute or two). Without a key the button still
+  works but produces a plain version from the latest status entries.
+- **From Claude Code, no key needed:** run `/jiskra-report` in this repository. Claude Code collects the facts
+  (`node report-cli.js facts`), writes the narrative, and saves it (`node report-cli.js save`) into the same history.
+  This writes to the local database, so it suits the machine you run Jiskra on.
+
+"What changed" compares against the previous saved report: risks added, raised, lowered, closed or
+removed (history is recorded from the moment this feature shipped), epic progress, RAG, Jira status
+and target quarter, and entries newer than the previous report.
+
 ## Config (`config.json`, gitignored — contains the Jira API token)
 
 ```json

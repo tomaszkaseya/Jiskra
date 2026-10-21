@@ -6,6 +6,11 @@
     "targetQuarterField": "customfield_14106",
     "ragField": "customfield_14707"
   },
+  "anthropic": {
+    "apiKey": "OPTIONAL_ANTHROPIC_API_KEY",
+    "model": "claude-opus-5-5",
+    "effort": "medium"
+  },
   "projects": ["ONP", "OA"],
   "gates": [3, 4, 5],
   "gateDescriptions": {

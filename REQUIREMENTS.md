@@ -72,14 +72,26 @@ lacks: a per-epic daily status log and a simple risk tracker, kept entirely outs
   (the API refuses changes with an explanatory error).
 
 ### 3.5 Executive report
-- The "Report" button downloads one standalone, self-contained HTML file covering
-  **all configured gates** (fetched fresh from Jira on click) — shareable by email or
-  printable to PDF, no Jiskra access needed by the reader.
-- One section per gate (each starts on a new page when printed), containing: KPI tiles
-  (epic count, % of child issues done, open risks by severity), an epic table (RAG dot,
-  quarter, Jira status, progress, open-risk count, latest daily status note) and an
-  open-risk register (severity-sorted, with mitigation, owner and the latest risk
-  update). Links point back to Jira.
+- The **Reports** page generates an executive report for the PMO, covering **all configured
+  gates** (fetched fresh from Jira), and keeps every generated report in a history (view,
+  download as a standalone HTML file, delete). The file is self-contained and readable without
+  Jiskra access.
+- Contents, in order: summary (bottom line, where things stand, attention needed), gate
+  scorecard, what changed since the previous report, open risks (severity-sorted, with
+  mitigation, owner, latest update), then per gate an epic table (Jira status, quarter,
+  progress, **health**: Launched / On track / Watch / At risk / Ready / No update, a short
+  status note and the date of the last entry) and a data-notes section. Links point back to Jira.
+- **Narrative.** Health, summaries and notes are written by Claude from the facts (Jira data,
+  status entries, risk register, movement). Either through the Anthropic API from the app
+  (`ANTHROPIC_API_KEY`), or from Claude Code (`/jiskra-report`, `report-cli.js`) without a key.
+  Without either, the report is built deterministically from the latest status entries and says so.
+- **Changes since** defaults to the previous saved report and can be set to any date: new /
+  raised / lowered / closed / reopened / removed risks, epic movement against the stored
+  baseline (progress and scope, RAG, Jira status, target quarter) and entries newer than the date.
+- Backing data: `reports` (the HTML, narrative and stats of each report), `risk_history`
+  (severity/status changes and deletions, written automatically on edit; recorded from when it
+  shipped) and `report_snapshots` (epic state at each report, the baseline for the next; no
+  movement is shown until one exists). Deleting a report also deletes its snapshot.
 
 ### 3.6 Data and integration rules
 - Jira is **read-only**: the tool never writes to Jira.

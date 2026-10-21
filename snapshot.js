@@ -24,5 +24,5 @@ db.close();
 const stats = new DatabaseSync(out);
 const n = (t) => stats.prepare(`SELECT COUNT(*) AS n FROM ${t}`).get().n;
 console.log(`Snapshot written to ${out}`);
-console.log(`  statuses: ${n("statuses")}, risks: ${n("risks")}, risk updates: ${n("risk_updates")}, users: ${n("users")}`);
+console.log(`  statuses: ${n("statuses")}, risks: ${n("risks")}, risk updates: ${n("risk_updates")}, reports: ${n("reports")}, users: ${n("users")}`);
 stats.close();

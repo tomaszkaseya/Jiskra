@@ -5,6 +5,7 @@ const fs = require("fs");
 const path = require("path");
 const crypto = require("crypto");
 const { DatabaseSync } = require("node:sqlite");
+const report = require("./report");
 
 // --- Configuration: environment variables override config.json ---
 const FILE_CONFIG = (() => {
@@ -30,6 +31,14 @@ const CONFIG = {
     tokenTtlHours: Number(env.AUTH_TOKEN_TTL_HOURS || FILE_CONFIG.auth?.tokenTtlHours || 12),
     // AUTH_USERS: "user:salt:hash,user2:salt:hash" (hex salt/hash from add-user.js --print)
     users: env.AUTH_USERS || null,
+  },
+  // Claude writes the narrative of the executive report. Without a key the report is still generated, just without AI commentary.
+  anthropic: {
+    apiKey: env.ANTHROPIC_API_KEY || FILE_CONFIG.anthropic?.apiKey || null,
+    model: env.ANTHROPIC_MODEL || FILE_CONFIG.anthropic?.model || "claude-opus-5-5",
+    effort: env.ANTHROPIC_EFFORT || FILE_CONFIG.anthropic?.effort || "medium",
+    baseUrl: env.ANTHROPIC_API_BASE_URL || FILE_CONFIG.anthropic?.baseUrl || "https://api.anthropic.com",
+    timeoutMs: Number(env.ANTHROPIC_TIMEOUT_MS || FILE_CONFIG.anthropic?.timeoutMs || 280000),
   },
 };
 if (!CONFIG.jira.baseUrl || !CONFIG.jira.email || !CONFIG.jira.token) {
@@ -66,6 +75,24 @@ db.exec(`
     labels TEXT NOT NULL, position INTEGER NOT NULL DEFAULT 0
   );
   CREATE TABLE IF NOT EXISTS meta (key TEXT PRIMARY KEY, value TEXT);
+  -- severity/status changes and deletions of risks (the risks table only keeps the current value)
+  CREATE TABLE IF NOT EXISTS risk_history (
+    id TEXT PRIMARY KEY, risk_id TEXT NOT NULL, epic_key TEXT NOT NULL, title TEXT,
+    field TEXT NOT NULL, old_value TEXT, new_value TEXT, created_at TEXT NOT NULL
+  );
+  -- epic state captured each time a report is generated, so the next report can show movement
+  CREATE TABLE IF NOT EXISTS report_snapshots (
+    taken_at TEXT NOT NULL, epic_key TEXT NOT NULL, jira_status TEXT, rag TEXT,
+    quarter TEXT, done INTEGER, total INTEGER
+  );
+  -- every generated executive report, kept as a standalone HTML document
+  CREATE TABLE IF NOT EXISTS reports (
+    id TEXT PRIMARY KEY, created_at TEXT NOT NULL, since TEXT NOT NULL, headline TEXT, model TEXT,
+    ai INTEGER NOT NULL DEFAULT 0, note TEXT, stats TEXT, narrative TEXT, html TEXT NOT NULL
+  );
+  CREATE INDEX IF NOT EXISTS idx_reports_created ON reports(created_at);
+  CREATE INDEX IF NOT EXISTS idx_rhist_created ON risk_history(created_at);
+  CREATE INDEX IF NOT EXISTS idx_snap_taken ON report_snapshots(taken_at);
   CREATE INDEX IF NOT EXISTS idx_statuses_epic ON statuses(epic_key);
   CREATE INDEX IF NOT EXISTS idx_risks_epic ON risks(epic_key);
   CREATE INDEX IF NOT EXISTS idx_rupd_risk ON risk_updates(risk_id);
@@ -170,15 +197,27 @@ const rowToRisk = (r) => ({
   id: r.id, title: r.title, description: r.description, mitigation: r.mitigation,
   severity: r.severity, owner: r.owner, status: r.status, createdAt: r.created_at,
   updatedAt: r.updated_at ?? undefined, closedAt: r.closed_at ?? undefined,
-  updates: db.prepare("SELECT * FROM risk_updates WHERE risk_id = ? ORDER BY created_at DESC").all(r.id).map(rowToUpdate),
+  updates: db.prepare("SELECT * FROM risk_updates WHERE risk_id = ? ORDER BY date DESC, created_at DESC").all(r.id).map(rowToUpdate),
 });
 function localDataFor(epicKey) {
   return {
-    statuses: db.prepare("SELECT * FROM statuses WHERE epic_key = ? ORDER BY created_at DESC").all(epicKey).map(rowToStatus),
+    statuses: db.prepare("SELECT * FROM statuses WHERE epic_key = ? ORDER BY date DESC, created_at DESC").all(epicKey).map(rowToStatus),
     risks: db.prepare("SELECT * FROM risks WHERE epic_key = ? ORDER BY created_at DESC").all(epicKey).map(rowToRisk),
   };
 }
 const newId = () => Math.random().toString(36).slice(2, 10);
+
+function insertRiskHistory(risk, field, oldValue, newValue, now) {
+  db.prepare("INSERT INTO risk_history (id,risk_id,epic_key,title,field,old_value,new_value,created_at) VALUES (?,?,?,?,?,?,?,?)")
+    .run(newId(), risk.id, risk.epic_key, risk.title, field, oldValue ?? null, newValue ?? null, now);
+}
+function logRiskChanges(before, body, now) {
+  for (const field of ["severity", "status"]) {
+    if (field in body && (body[field] ?? null) !== (before[field] ?? null)) {
+      insertRiskHistory(before, field, before[field], body[field], now);
+    }
+  }
+}
 
 // --- Authentication (JWT, HS256; users in SQLite or AUTH_USERS env) ---
 const AUTH = CONFIG.auth;
@@ -290,6 +329,92 @@ async function addChildProgress(epics) {
     }
     pageToken = data.nextPageToken && !data.isLast ? data.nextPageToken : null;
   } while (pageToken);
+}
+
+// --- Executive reports ---
+let generating = false; // one report at a time (a run takes a minute or two and calls Jira + Claude)
+
+const rowToReportMeta = (r) => ({
+  id: r.id, createdAt: r.created_at, since: r.since, headline: r.headline, model: r.model, ai: !!r.ai,
+  note: r.note ?? undefined, stats: r.stats ? JSON.parse(r.stats) : undefined,
+});
+
+function loadBaseline(since) {
+  const takenAt = db.prepare("SELECT MAX(taken_at) AS t FROM report_snapshots WHERE taken_at <= ?").get(since).t;
+  if (!takenAt) return null;
+  const epics = {};
+  for (const s of db.prepare("SELECT * FROM report_snapshots WHERE taken_at = ?").all(takenAt)) {
+    epics[s.epic_key] = { status: s.jira_status, rag: s.rag, quarter: s.quarter, done: s.done, total: s.total };
+  }
+  return { takenAt, epics };
+}
+
+// Step 1: everything the report is built from. Jira first (read-only), then the local statuses/risks.
+// Returns the facts plus the epic snapshot to store as the next baseline when the report is saved.
+async function collectFacts(since) {
+  const gates = [];
+  for (const tab of listTabs()) {
+    const epics = await fetchTabEpics(tab);
+    for (const e of epics) Object.assign(e, localDataFor(e.key));
+    gates.push({ name: tab.name, description: tab.description, epics });
+  }
+  const history = db.prepare("SELECT * FROM risk_history WHERE created_at >= ? ORDER BY created_at").all(since).map((h) => ({
+    riskId: h.risk_id, epicKey: h.epic_key, title: h.title, field: h.field, oldValue: h.old_value, newValue: h.new_value, at: h.created_at,
+  }));
+  const prev = db.prepare("SELECT created_at, headline FROM reports ORDER BY created_at DESC LIMIT 1").get();
+  const facts = report.buildFacts({
+    gates, since, baseline: loadBaseline(since), history, now: new Date().toISOString(), jiraBase: CONFIG.jira.baseUrl,
+    previous: prev ? { createdAt: prev.created_at, headline: prev.headline } : null,
+  });
+  const snapshot = gates.flatMap((g) => g.epics).map((e) => ({
+    key: e.key, status: e.status ?? null, rag: e.rag ?? null, quarter: e.targetQuarter ?? null, done: e.progress.done, total: e.progress.total,
+  }));
+  return { facts, snapshot };
+}
+
+// Step 2: store the rendered report and the baseline snapshot. `meta` = { ai, model, note, usage }.
+function saveReport(facts, snapshot, narrative, meta) {
+  const epicsAll = facts.gates.flatMap((g) => g.epics);
+  const openRisks = epicsAll.flatMap((e) => e.risks.filter((r) => r.status === "open"));
+  const stats = {
+    epics: epicsAll.length, launched: epicsAll.filter((e) => e.done).length,
+    openRisks: openRisks.length, highRisks: openRisks.filter((r) => r.severity === "High").length,
+    ...(meta.usage ? { inputTokens: meta.usage.input, outputTokens: meta.usage.output } : {}),
+  };
+  const html = report.renderHtml(facts, narrative, meta);
+  const id = newId() + newId();
+  db.exec("BEGIN");
+  try {
+    db.prepare("INSERT INTO reports (id,created_at,since,headline,model,ai,note,stats,narrative,html) VALUES (?,?,?,?,?,?,?,?,?,?)")
+      .run(id, facts.generatedAt, facts.since, narrative.headline, meta.model ?? null, meta.ai ? 1 : 0, meta.note ?? null, JSON.stringify(stats), JSON.stringify(narrative), html);
+    // The epic state at report time is the baseline for the next report's "what changed".
+    const ins = db.prepare("INSERT INTO report_snapshots (taken_at,epic_key,jira_status,rag,quarter,done,total) VALUES (?,?,?,?,?,?,?)");
+    for (const s of snapshot) ins.run(facts.generatedAt, s.key, s.status, s.rag, s.quarter, s.done, s.total);
+    db.exec("COMMIT");
+  } catch (e) {
+    db.exec("ROLLBACK");
+    throw e;
+  }
+  return rowToReportMeta(db.prepare("SELECT id,created_at,since,headline,model,ai,note,stats FROM reports WHERE id = ?").get(id));
+}
+
+// The in-app "Generate" button: collect, let Claude write the narrative through the API when a key is
+// configured (otherwise a plain version built from the latest entries), save.
+async function generateReport(since) {
+  const { facts, snapshot } = await collectFacts(since);
+  const fallback = report.fallbackNarrative(facts);
+  let narrative = fallback, meta = { ai: false, model: null, note: "no Anthropic API key configured" };
+  if (CONFIG.anthropic.apiKey) {
+    try {
+      const out = await report.generateNarrative(CONFIG.anthropic, facts);
+      narrative = report.mergeNarrative(out.narrative, fallback, facts);
+      meta = { ai: true, model: CONFIG.anthropic.model, usage: out.usage };
+    } catch (e) {
+      console.error("Report narrative failed, using the plain version:", e.message);
+      meta = { ai: false, model: null, note: e.message };
+    }
+  }
+  return saveReport(facts, snapshot, narrative, meta);
 }
 
 // --- HTTP plumbing ---
@@ -423,7 +548,10 @@ const server = http.createServer(async (req, res) => {
 
     // --- API ---
     if (url.pathname === "/api/config" && req.method === "GET") {
-      return sendJson(res, 200, { tabs: listTabs(), projects: CONFIG.projects, jiraBase: CONFIG.jira.baseUrl });
+      return sendJson(res, 200, {
+        tabs: listTabs(), projects: CONFIG.projects, jiraBase: CONFIG.jira.baseUrl,
+        reportAi: { enabled: !!CONFIG.anthropic.apiKey, model: CONFIG.anthropic.model },
+      });
     }
     if (url.pathname === "/api/export" && req.method === "GET") {
       return sendJson(res, 200, exportData());
@@ -450,6 +578,42 @@ const server = http.createServer(async (req, res) => {
     }
 
     const now = new Date().toISOString();
+
+    // /api/reports (GET list, POST generate) and /api/reports/:id (GET with html, DELETE)
+    const mr = url.pathname.match(/^\/api\/reports(?:\/([\w-]+))?$/);
+    if (mr) {
+      const id = mr[1];
+      if (!id && req.method === "GET") {
+        const rows = db.prepare("SELECT id,created_at,since,headline,model,ai,note,stats FROM reports ORDER BY created_at DESC").all();
+        return sendJson(res, 200, { reports: rows.map(rowToReportMeta) });
+      }
+      if (!id && req.method === "POST") {
+        if (generating) return sendJson(res, 409, { error: "A report is already being generated. Wait for it to finish." });
+        const body = await readBody(req);
+        const last = db.prepare("SELECT MAX(created_at) AS t FROM reports").get().t;
+        const since = body.since || last || new Date(Date.now() - 7 * 864e5).toISOString();
+        if (Number.isNaN(Date.parse(since))) return sendJson(res, 400, { error: "invalid 'since' date" });
+        generating = true;
+        try {
+          return sendJson(res, 201, await generateReport(new Date(since).toISOString()));
+        } finally {
+          generating = false;
+        }
+      }
+      if (id && req.method === "GET") {
+        const row = db.prepare("SELECT * FROM reports WHERE id = ?").get(id);
+        if (!row) return sendJson(res, 404, { error: "report not found" });
+        return sendJson(res, 200, { ...rowToReportMeta(row), html: row.html });
+      }
+      if (id && req.method === "DELETE") {
+        const row = db.prepare("SELECT created_at FROM reports WHERE id = ?").get(id);
+        if (!row) return sendJson(res, 404, { error: "report not found" });
+        db.prepare("DELETE FROM reports WHERE id = ?").run(id);
+        db.prepare("DELETE FROM report_snapshots WHERE taken_at = ?").run(row.created_at);
+        return sendJson(res, 200, { ok: true });
+      }
+      return sendJson(res, 405, { error: "method not allowed" });
+    }
 
     // /api/epic/:key/risk/:riskId/update (+ /:id for PUT/DELETE) - dated updates on a risk
     const mu = url.pathname.match(/^\/api\/epic\/([A-Z0-9-]+)\/risk\/([\w-]+)\/update(?:\/([\w-]+))?$/);
@@ -517,8 +681,10 @@ const server = http.createServer(async (req, res) => {
           });
           if (body.status && body.status !== "open") { cols.push("closed_at = COALESCE(closed_at, ?)"); vals.push(now); }
           if (body.status === "open") cols.push("closed_at = NULL");
+          const before = db.prepare("SELECT * FROM risks WHERE id = ? AND epic_key = ?").get(id, key);
           r = db.prepare(`UPDATE risks SET ${[...cols, "updated_at = ?"].join(", ")} WHERE id = ? AND epic_key = ?`)
             .run(...vals, now, id, key);
+          if (r.changes && before) logRiskChanges(before, body, now);
         }
         if (!r.changes) return sendJson(res, 404, { error: "not found" });
         const table = kind === "status" ? "statuses" : "risks";
@@ -530,8 +696,10 @@ const server = http.createServer(async (req, res) => {
         if (kind === "status") {
           r = db.prepare("DELETE FROM statuses WHERE id = ? AND epic_key = ?").run(id, key);
         } else {
+          const before = db.prepare("SELECT * FROM risks WHERE id = ? AND epic_key = ?").get(id, key);
           db.prepare("DELETE FROM risk_updates WHERE risk_id = ?").run(id);
           r = db.prepare("DELETE FROM risks WHERE id = ? AND epic_key = ?").run(id, key);
+          if (r.changes && before) insertRiskHistory(before, "deleted", before.severity, null, now);
         }
         if (!r.changes) return sendJson(res, 404, { error: "not found" });
         return sendJson(res, 200, { ok: true });
@@ -552,6 +720,10 @@ const server = http.createServer(async (req, res) => {
   }
 });
 
-server.listen(CONFIG.port, () => {
-  console.log(`Jiskra running at http://localhost:${CONFIG.port}`);
-});
+// `node server.js` starts the app; report-cli.js requires this file to reuse the report steps without listening.
+if (require.main === module) {
+  server.listen(CONFIG.port, () => {
+    console.log(`Jiskra running at http://localhost:${CONFIG.port}`);
+  });
+}
+module.exports = { collectFacts, saveReport, loadBaseline, db };

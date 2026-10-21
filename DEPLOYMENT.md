@@ -28,6 +28,18 @@ development fallback and is not needed in a deployment.
 | `AUTH_SECRET` | yes | **yes** | 32+ random bytes hex (e.g. `openssl rand -hex 32`) → host `.env`. Must be stable across restarts or logins drop. |
 | `AUTH_TOKEN_TTL_HOURS` | no | no | default `12` |
 | `AUTH_USERS` | no | **yes** | optional override: comma-separated `username:salt:hash` entries → host `.env` |
+| `ANTHROPIC_API_KEY` | no | **yes** | enables the AI-written executive report in the app (Reports → Generate). Without it the button produces a plain version built from the latest status entries → host `.env` |
+| `ANTHROPIC_MODEL` | no | no | default `claude-opus-5-5` |
+| `ANTHROPIC_EFFORT` | no | no | `low` / `medium` / `high`, default `medium` |
+| `ANTHROPIC_API_BASE_URL` | no | no | default `https://api.anthropic.com` (only for a proxy or tests) |
+| `ANTHROPIC_TIMEOUT_MS` | no | no | default `280000` |
+
+**Executive reports.** *Reports* in the app generates the PMO report and keeps every one in the
+`reports` table of the database (a standalone HTML document each, roughly 30–60 KB). One run reads
+Jira and makes one streaming call to the Anthropic API (about 15k tokens in, 10k out; roughly
+$0.25 on `claude-opus-5-5`) and takes one to two minutes. Reports can also be produced without
+an API key from Claude Code (`/jiskra-report`, which uses `report-cli.js` against the local
+database); both end up in the same history.
 
 User accounts live in the `users` table of the SQLite database. They arrive with the
 seed database (see below) and are managed in the app itself, on the **Users** page under
@@ -82,12 +94,14 @@ that the tab definitions are already in the file.
   (stop old, start new).
 - Terminate TLS in front (ALB / reverse proxy) — **HTTPS is mandatory**; the login
   token is a bearer credential. The app itself listens on plain HTTP on `PORT`.
-- Outbound HTTPS (443) to the Jira Cloud instance (`JIRA_BASE_URL`) must be allowed.
+- Outbound HTTPS (443) to the Jira Cloud instance (`JIRA_BASE_URL`) must be allowed, and to
+  `api.anthropic.com` when `ANTHROPIC_API_KEY` is set. Facts about epics, statuses and risks
+  are sent to Anthropic to write the report narrative.
 - Health check: `GET /` returns the UI (200) without authentication; everything under
   `/api/` except `/api/login` requires a valid JWT.
 
 ## Dockerfile
 
 A ready-to-use `Dockerfile` is in the repository root (node:24-alpine, copies
-`server.js`, `add-user.js`, `snapshot.js` and `public/`, data volume at `/data`,
+`server.js`, `report.js`, `report-cli.js`, `add-user.js`, `snapshot.js` and `public/`, data volume at `/data`,
 listens on 4777).
