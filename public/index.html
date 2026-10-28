@@ -255,7 +255,7 @@ function renderSettings(){
 // --- settings: import / export (move data between workstations) ---
 function renderDataSection(){
   $("#spanel").innerHTML = `<h2>Import / export</h2>
-    <p class="hint">Exports tabs, daily statuses, risks and risk updates to a JSON file. Users and Jira credentials are not included.
+    <p class="hint">Exports tabs, daily statuses, risks, risk updates and reports (with their history) to a JSON file. Users and Jira credentials are not included.
       Importing merges: records with the same id are overwritten, nothing is deleted.</p>
     <p><button class="primary" id="exportBtn">Export data</button></p>
     <h2 style="margin-top:6px;font-size:14px">Import</h2>
@@ -270,7 +270,7 @@ function renderDataSection(){
       a.download = `jiskra-export-${new Date().toISOString().slice(0,10)}.json`;
       a.click();
       URL.revokeObjectURL(a.href);
-      msg(`Exported ${d.statuses.length} statuses, ${d.risks.length} risks, ${d.risk_updates.length} risk updates, ${d.tabs.length} tabs.`);
+      msg(`Exported ${d.statuses.length} statuses, ${d.risks.length} risks, ${d.risk_updates.length} risk updates, ${d.reports.length} reports, ${d.tabs.length} tabs.`);
     }catch(e){ msg(e.message); }
   };
   $("#importFile").onchange = async ev => {
@@ -281,7 +281,7 @@ function renderDataSection(){
       JSON.parse(body);
       const r = await api("/api/import", {method:"POST", headers:{"Content-Type":"application/json"}, body});
       const c = r.imported;
-      msg(`Imported ${c.statuses} statuses, ${c.risks} risks, ${c.risk_updates} risk updates, ${c.tabs} tabs. Reloading…`);
+      msg(`Imported ${c.statuses} statuses, ${c.risks} risks, ${c.risk_updates} risk updates, ${c.reports} reports, ${c.tabs} tabs. Reloading…`);
       setTimeout(() => location.reload(), 1200);
     }catch(e){ msg("Import failed: " + e.message); }
   };

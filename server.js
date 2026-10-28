@@ -443,7 +443,13 @@ const EXPORT_TABLES = {
   statuses: ["id", "epic_key", "date", "author", "text", "created_at", "updated_at"],
   risks: ["id", "epic_key", "title", "description", "mitigation", "severity", "owner", "status", "created_at", "updated_at", "closed_at"],
   risk_updates: ["id", "risk_id", "date", "text", "author", "created_at", "updated_at"],
+  risk_history: ["id", "risk_id", "epic_key", "title", "field", "old_value", "new_value", "created_at"],
+  reports: ["id", "created_at", "since", "headline", "model", "ai", "note", "stats", "narrative", "html"],
+  // no id column: a row is identified by its key columns
+  report_snapshots: ["taken_at", "epic_key", "jira_status", "rag", "quarter", "done", "total"],
 };
+const EXPORT_KEYS = { report_snapshots: ["taken_at", "epic_key"] };
+const exportKey = (t) => EXPORT_KEYS[t] || ["id"];
 
 function exportData() {
   const out = { app: "jiskra", version: 1, exportedAt: new Date().toISOString() };
@@ -453,7 +459,7 @@ function exportData() {
   return out;
 }
 
-// Merge an export into the database: rows are upserted by id, nothing is deleted.
+// Merge an export into the database: rows are replaced by key, nothing else is deleted.
 function importData(body) {
   if (!body || body.app !== "jiskra") throw new Error("not a Jiskra export file");
   const counts = {};
@@ -462,11 +468,12 @@ function importData(body) {
     for (const [t, cols] of Object.entries(EXPORT_TABLES)) {
       const rows = body[t] || [];
       if (!Array.isArray(rows)) throw new Error(`"${t}" must be an array`);
-      const stmt = db.prepare(
-        `INSERT INTO ${t} (${cols.join(",")}) VALUES (${cols.map(() => "?").join(",")})
-         ON CONFLICT(id) DO UPDATE SET ${cols.slice(1).map((c) => `${c}=excluded.${c}`).join(",")}`);
+      const key = exportKey(t);
+      const del = db.prepare(`DELETE FROM ${t} WHERE ${key.map((c) => `${c} = ?`).join(" AND ")}`);
+      const stmt = db.prepare(`INSERT INTO ${t} (${cols.join(",")}) VALUES (${cols.map(() => "?").join(",")})`);
       for (const r of rows) {
-        if (!r || typeof r.id !== "string" || !r.id) throw new Error(`"${t}" row without id`);
+        if (!r || key.some((c) => r[c] == null || r[c] === "")) throw new Error(`"${t}" row without ${key.join("/")}`);
+        del.run(...key.map((c) => String(r[c])));
         stmt.run(...cols.map((c) => (r[c] == null ? null : typeof r[c] === "number" ? r[c] : String(r[c]))));
       }
       counts[t] = rows.length;
