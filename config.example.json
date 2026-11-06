@@ -22,5 +22,10 @@
   "auth": {
     "enabled": true,
     "tokenTtlHours": 12
+  },
+  "backup": {
+    "repo": "your-name/Jiskra-data",
+    "token": "OPTIONAL_FINE_GRAINED_GITHUB_TOKEN",
+    "keep": 30
   }
 }

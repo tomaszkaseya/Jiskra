@@ -33,6 +33,12 @@ development fallback and is not needed in a deployment.
 | `ANTHROPIC_EFFORT` | no | no | `low` / `medium` / `high`, default `medium` |
 | `ANTHROPIC_API_BASE_URL` | no | no | default `https://api.anthropic.com` (only for a proxy or tests) |
 | `ANTHROPIC_TIMEOUT_MS` | no | no | default `280000` |
+| `BACKUP_REPO` | no | no | `owner/name` of a **private** GitHub repository that receives snapshot backups — enables backups when set (see below) |
+| `BACKUP_TOKEN` | no | **yes** | GitHub token with Contents read+write on that repository → host `.env`. Locally omitted: `gh auth token` is used as a fallback |
+| `BACKUP_KEEP` | no | no | snapshots to keep, oldest are pruned (default `30`, `0` = unlimited) |
+| `BACKUP_ON_REPORT` | no | no | push a backup after every saved report (default `true`) |
+| `BACKUP_DAILY` | no | no | push a backup once a day while the server runs, plus once at startup (default `true`) |
+| `BACKUP_BRANCH` | no | no | default: the repository's default branch |
 
 **Executive reports.** *Reports* in the app generates the PMO report and keeps every one in the
 `reports` table of the database (a standalone HTML document each, roughly 30–60 KB). One run reads
@@ -64,7 +70,34 @@ ignored and the Users page is read-only.
 - Encryption at rest: use an encrypted volume (KMS). Passwords are stored as salted
   scrypt hashes; no Jira credentials are ever written to the database.
 - Backup: run `node snapshot.js <file>` (consistent even while the app is running) and
-  ship the output to S3 — daily is plenty.
+  ship the output to S3 — daily is plenty. Or use the built-in GitHub backups below.
+
+## Backups to GitHub (private repository)
+
+`backup.js` pushes a consistent snapshot of the whole database (statuses, risks, risk
+history, reports, users, tabs — same `VACUUM INTO` as `snapshot.js`, safe while the app
+runs) to a **private** GitHub repository. Every upload is a commit, so the repository is
+also a versioned history of the data: "what did the risks look like last month?" is one
+click away. Oldest snapshots are pruned automatically (`BACKUP_KEEP`, default 30).
+
+Setup:
+
+1. Create a **private** repository, e.g. `Jiskra-data`. The snapshots contain the risk
+   register and password hashes — the script refuses a public repository
+   (`BACKUP_ALLOW_PUBLIC=true` overrides).
+2. Set `BACKUP_REPO=owner/Jiskra-data`. For the token, a fine-grained GitHub PAT with
+   **Contents: read and write** access limited to that one repository is ideal
+   (`BACKUP_TOKEN`). Locally, no token is needed — the logged-in `gh` CLI is used.
+3. Done: the server pushes a backup after every saved report (in-app or `/jiskra-report`)
+   and once a day. `node backup.js` runs one on demand (cron-friendly). A fresh install
+   with an **empty** database pushes nothing — an empty snapshot can never become the
+   newest (and accidentally restored) file in the history.
+
+Restore: download the newest `jiskra-*.db` from the repository (raw download URL), place
+it on the persistent volume as `$DATA_DIR/jiskra.db` before the app's first start — the
+same flow as *Seeding the first deployment* below. Limits: the GitHub Contents API
+handles files up to ~25 MB (the script checks); a database with years of reports stays
+far below that, otherwise use the S3 route above.
 - On first start the app auto-migrates legacy `data/db.json` / `data/users.json` files
   into SQLite and renames them to `*.migrated`.
 
@@ -72,6 +105,16 @@ ignored and the Users page is read-only.
 
 The owner has been using Jiskra locally; the production database must start from their
 local data (risk history, daily statuses, user accounts, tab definitions), not empty.
+
+**Easiest** — pull it straight from the backup repository on the new machine (needs
+`BACKUP_REPO`/`backup.repo` and a token or `gh` login; overwrites only an empty database
+unless `--force`):
+
+```
+node restore.js        # downloads the newest jiskra-*.db and installs it as $DATA_DIR/jiskra.db
+```
+
+**Manual** — the snapshot file route:
 
 1. Owner runs `node snapshot.js` locally — produces a consistent single-file snapshot
    (`data/jiskra-seed-<date>.db`), safe to take while the app is running.

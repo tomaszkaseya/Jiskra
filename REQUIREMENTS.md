@@ -140,6 +140,7 @@ so a deployment needs no config file at all (see `DEPLOYMENT.md` for the full ta
 | `port` | `PORT` | local HTTP port |
 | — | `DATA_DIR` | where `jiskra.db` lives (default `./data`) |
 | `auth.*` | `AUTH_ENABLED` / `AUTH_SECRET` / `AUTH_TOKEN_TTL_HOURS` / `AUTH_USERS` | authentication settings |
+| `backup.*` | `BACKUP_REPO` / `BACKUP_TOKEN` / `BACKUP_KEEP` / `BACKUP_ON_REPORT` / `BACKUP_DAILY` | snapshot backups to a private GitHub repository: after every saved report and daily, oldest pruned (see `DEPLOYMENT.md`) |
 
 Changing configuration requires a restart. Deployment target: one instance, persistent
 EBS volume for `DATA_DIR` (not EFS/NFS — SQLite locking), HTTPS in front, secrets
