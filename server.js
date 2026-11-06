@@ -6,7 +6,6 @@ const path = require("path");
 const crypto = require("crypto");
 const { DatabaseSync } = require("node:sqlite");
 const report = require("./report");
-const backup = require("./backup");
 
 // --- Configuration: environment variables override config.json ---
 const FILE_CONFIG = (() => {
@@ -396,8 +395,6 @@ function saveReport(facts, snapshot, narrative, meta) {
     db.exec("ROLLBACK");
     throw e;
   }
-  // Every saved report is a good moment to push a snapshot to the backup repository (fire-and-forget).
-  scheduleBackup("report");
   return rowToReportMeta(db.prepare("SELECT id,created_at,since,headline,model,ai,note,stats FROM reports WHERE id = ?").get(id));
 }
 
@@ -730,31 +727,10 @@ const server = http.createServer(async (req, res) => {
   }
 });
 
-// Push a database snapshot to the private GitHub backup repository, if one is configured.
-// Never blocks the caller; failures are logged, not thrown.
-function scheduleBackup(reason) {
-  const cfg = backup.backupConfig();
-  if (!cfg.repo || !cfg.token) return;
-  if (reason === "report" && !cfg.onReport) return;
-  backup.runBackup(reason).then(
-    (r) => {
-      if (r.skipped) console.log(`Backup to ${cfg.repo} skipped: ${r.reason}`);
-      else console.log(`Backup pushed to ${cfg.repo}: ${r.file} (${Math.round(r.size / 1024)} KB)${r.pruned ? `, pruned ${r.pruned} old snapshot(s)` : ""}`);
-    },
-    (e) => console.error(`Backup to ${cfg.repo} failed: ${e.message}`),
-  );
-}
-
 // `node server.js` starts the app; report-cli.js requires this file to reuse the report steps without listening.
 if (require.main === module) {
   server.listen(CONFIG.port, () => {
     console.log(`Jiskra running at http://localhost:${CONFIG.port}`);
-    const cfg = backup.backupConfig();
-    if (cfg.repo && cfg.token && cfg.daily) {
-      scheduleBackup("startup");
-      setInterval(() => scheduleBackup("daily"), 24 * 3600 * 1000).unref();
-      console.log(`Backups to ${cfg.repo} enabled (daily + after each saved report, keeping the last ${cfg.keep}).`);
-    }
   });
 }
 module.exports = { collectFacts, saveReport, loadBaseline, db };

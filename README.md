@@ -50,31 +50,6 @@ Who writes the narrative:
 removed (history is recorded from the moment this feature shipped), epic progress, RAG, Jira status
 and target quarter, and entries newer than the previous report.
 
-## Backups (statuses / risks / reports → GitHub)
-
-`backup.js` pushes a consistent snapshot of the whole database to a **private** GitHub
-repository — every upload is a commit, so the repo doubles as a versioned history of the
-data. It runs automatically after every saved report and once a day when
-`BACKUP_REPO` is configured (locally the `gh` CLI login is reused; deployments need a
-`BACKUP_TOKEN`), and `node backup.js` runs one on demand. Oldest snapshots are pruned
-(default: keep 30). Restore = `node restore.js` on the new machine: it downloads the
-newest `jiskra-*.db` and installs it as `data/jiskra.db` before the first start.
-Details: [DEPLOYMENT.md](DEPLOYMENT.md) → *Backups*.
-
-## Running Jiskra on another machine
-
-```
-git clone https://github.com/tomaszkaseya/Jiskra.git && cd Jiskra
-cp config.example.json config.json     # fill in your Jira details
-gh auth login                           # one-time: access to the private backup repo
-node restore.js                         # pulls your data from GitHub → data/jiskra.db
-node server.js
-```
-
-`restore.js` downloads the newest snapshot and installs it as `data/jiskra.db` — statuses,
-risks, reports, tabs and your user account all come with it. Note: the new instance is a
-**copy, not a sync** — from then on the two machines keep separate data.
-
 ## Config (`config.json`, gitignored — contains the Jira API token)
 
 ```json
